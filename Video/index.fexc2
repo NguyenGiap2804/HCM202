@@ -1,0 +1,1645 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cuốn sách 3D</title>
+  <style>
+    :root{
+      --bg0:#060714;
+      --bg1:#0a0c22;
+      --bg2:#120a2b;
+
+      --bookW:min(980px, 88vw);
+      --bookH:calc(var(--bookW) * 0.64);
+      --radius:18px;
+
+      --spineW:28px;
+      --thickness:18px;
+      --sheetStep:1.7px;
+
+      --easeOut:cubic-bezier(.16,1,.3,1);
+      --easeInOut:cubic-bezier(.65,0,.35,1);
+
+      --ui: rgba(255,255,255,.82);
+      --uiDim: rgba(255,255,255,.56);
+      --glass: rgba(20, 24, 44, .52);
+      --glass2: rgba(12, 14, 28, .35);
+
+      --uRx: 0deg;
+      --uRy: 0deg;
+      --uRz: 0deg;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      color:#e9ecff;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      overflow:hidden;
+      background: radial-gradient(1100px 800px at 20% 20%, #1b1446 0%, transparent 55%),
+                  radial-gradient(900px 700px at 80% 30%, #0f2a4b 0%, transparent 60%),
+                  radial-gradient(1200px 900px at 60% 90%, #2a0f3f 0%, transparent 55%),
+                  linear-gradient(180deg, var(--bg1), var(--bg0));
+    }
+
+    /* Star canvas */
+    #stars{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:100%;
+      display:block;
+      z-index:0;
+    }
+
+    /* Nebula / vignette overlays */
+    .fx{
+      position:fixed;
+      inset:-20vh -20vw;
+      z-index:1;
+      pointer-events:none;
+      background:
+        radial-gradient(800px 520px at 20% 70%, rgba(157,89,255,.15), transparent 60%),
+        radial-gradient(620px 460px at 78% 28%, rgba(64,200,255,.14), transparent 60%),
+        radial-gradient(900px 600px at 55% 35%, rgba(255,80,170,.10), transparent 65%),
+        radial-gradient(900px 800px at 50% 110%, rgba(255,255,255,.06), transparent 65%);
+      filter: blur(2px);
+      mix-blend-mode: screen;
+      opacity:.9;
+      transform: translateZ(0);
+    }
+    .vignette{
+      position:fixed;
+      inset:0;
+      z-index:2;
+      pointer-events:none;
+      background:
+        radial-gradient(1200px 900px at 50% 40%, transparent 35%, rgba(0,0,0,.55) 80%),
+        linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.35));
+    }
+
+    .stage{
+      position:relative;
+      z-index:3;
+      height:100%;
+      display:grid;
+      place-items:center;
+      perspective:2000px; /* (1) REQUIRED */
+      perspective-origin: 50% 45%;
+    }
+
+    /* HUD */
+    .hud{
+      position:fixed;
+      left:50%;
+      bottom:20px;
+      transform:translateX(-50%);
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:999px;
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow: 0 18px 40px rgba(0,0,0,.35);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      user-select:none;
+    }
+    .hud .pill{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:7px 10px;
+      border-radius:999px;
+      background: rgba(8,10,22,.38);
+      border:1px solid rgba(255,255,255,.10);
+    }
+    .hud .label{
+      font-size:13px;
+      color:var(--uiDim);
+      letter-spacing:.2px;
+      white-space:nowrap;
+    }
+    .hud .value{
+      font-size:13px;
+      color:var(--ui);
+      white-space:nowrap;
+    }
+
+    .btn{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.05));
+      color:#eef1ff;
+      border-radius:999px;
+      padding:10px 14px;
+      cursor:pointer;
+      font-weight:600;
+      letter-spacing:.2px;
+      transition: transform .18s var(--easeOut), border-color .18s var(--easeOut), background .18s var(--easeOut);
+      box-shadow: 0 10px 26px rgba(0,0,0,.30);
+    }
+    .btn:hover{ transform: translateY(-1px); border-color: rgba(255,255,255,.20); }
+    .btn:active{ transform: translateY(0px) scale(.99); }
+    .btn[disabled]{
+      opacity:.45;
+      cursor:not-allowed;
+      box-shadow:none;
+    }
+    .btn.ghost{
+      background: rgba(12, 14, 28, .25);
+    }
+
+    .hint{
+      position:fixed;
+      top:18px;
+      left:50%;
+      transform:translateX(-50%);
+      padding:10px 14px;
+      border-radius:999px;
+      background: rgba(12, 14, 28, .35);
+      border:1px solid rgba(255,255,255,.10);
+      color: rgba(255,255,255,.72);
+      font-size:13px;
+      letter-spacing:.2px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      user-select:none;
+      box-shadow: 0 18px 45px rgba(0,0,0,.25);
+      z-index:5;
+    }
+    .hint b{ color:rgba(255,255,255,.9); font-weight:700; }
+
+    /* Book shell (tilt / look-around) */
+    .book-shell{
+      width: var(--bookW);
+      height: var(--bookH);
+      transform-style: preserve-3d;
+      will-change: transform;
+      cursor: grab;
+      transition: transform 180ms var(--easeOut);
+      filter: drop-shadow(0 40px 70px rgba(0,0,0,.55));
+      --baseRx: 10deg;
+      --baseRy: -18deg;
+      --baseRz: 0deg;
+      transform:
+        translate3d(0, 14px, 0)
+        rotateX(calc(var(--baseRx) + var(--uRx)))
+        rotateY(calc(var(--baseRy) + var(--uRy)))
+        rotateZ(calc(var(--baseRz) + var(--uRz)));
+    }
+    .book-shell:active{ cursor: grabbing; }
+
+    .book-shell.open-pose{
+      --baseRx: 8deg;
+      --baseRy: -12deg;
+      --baseRz: 0deg;
+    }
+
+    .book-shell.video-pose{
+      transition: transform 760ms var(--easeInOut);
+      --baseRx: 62deg; /* “xoay ngang” kiểu đặt sách nằm xuống */
+      --baseRy: 0deg;
+      --baseRz: -10deg;
+    }
+
+    /* The book */
+    .book{
+      position:relative;
+      width:100%;
+      height:100%;
+      transform-style: preserve-3d; /* (2) REQUIRED */
+      border-radius: var(--radius);
+    }
+
+    /* CLOSED/OPEN control */
+    .book[data-state="closed"] .interior,
+    .book[data-state="closed"] .back-board,
+    .book[data-state="closed"] .toc,
+    .book[data-state="closed"] .sheets,
+    .book[data-state="closed"] .spine{
+      opacity:0;
+      visibility:hidden;
+      pointer-events:none;
+      transform: translateZ(-200px);
+    }
+
+    /* "Reveal" gate to guarantee CLOSED never leaks pages/TOC/back-board */
+    .book:not(.reveal) .interior,
+    .book:not(.reveal) .back-board,
+    .book:not(.reveal) .toc,
+    .book:not(.reveal) .sheets,
+    .book:not(.reveal) .spine{
+      opacity:0 !important;
+      visibility:hidden !important;
+      pointer-events:none !important;
+      transform: translateZ(-260px) !important;
+    }
+
+    .book.reveal .interior,
+    .book.reveal .back-board,
+    .book.reveal .toc,
+    .book.reveal .sheets,
+    .book.reveal .spine{
+      opacity:1;
+      visibility:visible;
+      pointer-events:auto;
+      transform: translateZ(0);
+      transition: opacity 420ms var(--easeOut), transform 420ms var(--easeOut);
+    }
+
+    /* Back board (left half) */
+    .back-board{
+      position:absolute;
+      inset:0;
+      width:50%;
+      border-radius: var(--radius) 0 0 var(--radius);
+      background:
+        radial-gradient(900px 520px at 30% 20%, rgba(255,255,255,.10), transparent 60%),
+        linear-gradient(180deg, rgba(12,14,28,.85), rgba(8,9,16,.90));
+      border:1px solid rgba(255,255,255,.10);
+      transform: translateZ(0px);
+      overflow:hidden;
+    }
+    .back-board::before{
+      content:"";
+      position:absolute;
+      inset:-40px;
+      background:
+        radial-gradient(520px 380px at 70% 30%, rgba(255,255,255,.08), transparent 55%),
+        repeating-linear-gradient(135deg, rgba(255,255,255,.03) 0 2px, transparent 2px 8px);
+      opacity:.35;
+      filter: blur(.3px);
+      transform: translateZ(1px);
+      pointer-events:none;
+    }
+
+    /* Spine */
+    .spine{
+      position:absolute;
+      top:0;
+      left:50%;
+      width: var(--spineW);
+      height:100%;
+      transform-style: preserve-3d;
+      transform: translateX(calc(-1 * var(--spineW) / 2)) translateZ(8px);
+      border-radius: 10px;
+      background:
+        radial-gradient(120px 420px at 50% 20%, rgba(255,255,255,.20), transparent 60%),
+        linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04)),
+        linear-gradient(90deg, rgba(0,0,0,.35), rgba(255,255,255,.08), rgba(0,0,0,.35));
+      box-shadow: 0 22px 60px rgba(0,0,0,.35);
+      border:1px solid rgba(255,255,255,.10);
+      overflow:hidden;
+      will-change: transform, opacity;
+    }
+    .spine::after{
+      content:"GÁY SÁCH";
+      position:absolute;
+      inset:auto 0 0 0;
+      padding:10px 6px;
+      font-size:11px;
+      letter-spacing:.18em;
+      text-align:center;
+      color:rgba(255,255,255,.70);
+      transform: translateZ(2px);
+      text-shadow: 0 2px 10px rgba(0,0,0,.35);
+    }
+    .spine::before{
+      content:"";
+      position:absolute;
+      inset:-14px;
+      background:
+        radial-gradient(220px 160px at 50% 25%, rgba(255,255,255,.18), transparent 60%),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px, transparent 1px 6px);
+      opacity:.35;
+      transform: translateZ(1px);
+    }
+
+    /* Cover */
+    .cover{
+      position:absolute;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      transform-style: preserve-3d;
+      transform-origin: left center;
+      border-radius: var(--radius);
+      will-change: transform, left, width;
+      transition:
+        transform 1100ms var(--easeInOut),
+        left 1100ms var(--easeInOut),
+        width 1100ms var(--easeInOut);
+      z-index: 50;
+    }
+    /* (3) CLOSED: cover must fully hide book (no pages/TOC/back-board leak) */
+    .book[data-state="closed"] .cover{
+      left:0;
+      width:100%;
+      transform: translateZ(14px) rotateY(0deg);
+    }
+
+    /* (4) OPENED cover: shrink to right half and flip */
+    .book[data-state="opened"] .cover{
+      left:50%;
+      width:50%;
+      transform: translateZ(14px) rotateY(-180deg);
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+
+    .cover .face{
+      position:absolute;
+      inset:0;
+      backface-visibility:hidden;
+      -webkit-backface-visibility:hidden;
+      border-radius: inherit;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.12);
+    }
+    .cover .outer{
+      background:
+        radial-gradient(900px 520px at 25% 30%, rgba(255,255,255,.20), transparent 55%),
+        radial-gradient(700px 500px at 80% 70%, rgba(140,255,227,.12), transparent 60%),
+        linear-gradient(145deg, rgba(130,60,255,.40), rgba(22,28,60,.25) 35%, rgba(255,80,170,.22)),
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
+      box-shadow: 0 26px 80px rgba(0,0,0,.45);
+    }
+    .cover .outer::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:
+        radial-gradient(260px 120px at 18% 18%, rgba(255,255,255,.22), transparent 60%),
+        radial-gradient(420px 240px at 90% 20%, rgba(255,255,255,.12), transparent 60%),
+        repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0 1px, transparent 1px 7px);
+      opacity:.35;
+      mix-blend-mode: screen;
+      pointer-events:none;
+    }
+    .cover .outer .title{
+      position:absolute;
+      left:26px;
+      right:26px;
+      top:24px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      transform: translateZ(2px);
+    }
+    .cover .outer .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      width:max-content;
+      padding:8px 12px;
+      border-radius:999px;
+      background: rgba(10, 12, 22, .36);
+      border:1px solid rgba(255,255,255,.14);
+      color: rgba(255,255,255,.82);
+      font-size:12px;
+      letter-spacing:.08em;
+    }
+    .dot{
+      width:7px; height:7px; border-radius:50%;
+      background: rgba(255,255,255,.85);
+      box-shadow: 0 0 18px rgba(255,255,255,.55);
+    }
+    .cover .outer h1{
+      margin:0;
+      font-size:34px;
+      line-height:1.1;
+      letter-spacing:.4px;
+      text-shadow: 0 20px 40px rgba(0,0,0,.35);
+    }
+    .cover .outer p{
+      margin:0;
+      max-width: 420px;
+      color: rgba(255,255,255,.76);
+      line-height:1.45;
+      font-size:14px;
+    }
+    .cover .outer .cta{
+      position:absolute;
+      left:26px;
+      bottom:22px;
+      right:26px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      color: rgba(255,255,255,.78);
+      font-size:13px;
+      letter-spacing:.2px;
+      transform: translateZ(2px);
+    }
+    .cover .outer .cta span{
+      opacity:.9;
+    }
+    .cover .outer .cta b{
+      font-weight:800;
+      color: rgba(255,255,255,.92);
+    }
+
+    .cover .inner{
+      transform: rotateY(180deg);
+      background:
+        radial-gradient(900px 520px at 30% 25%, rgba(255,255,255,.10), transparent 55%),
+        linear-gradient(180deg, rgba(250,250,255,.96), rgba(240,241,250,.93));
+      color:#12162a;
+    }
+    .cover .inner::before{
+      content:"";
+      position:absolute;
+      inset:-30px;
+      background:
+        radial-gradient(520px 380px at 70% 30%, rgba(0,0,0,.06), transparent 55%),
+        repeating-linear-gradient(135deg, rgba(0,0,0,.03) 0 2px, transparent 2px 10px);
+      opacity:.55;
+      pointer-events:none;
+    }
+    .cover .inner .inside-note{
+      position:absolute;
+      left:20px;
+      right:20px;
+      bottom:18px;
+      font-size:12px;
+      color: rgba(0,0,0,.55);
+      letter-spacing:.2px;
+    }
+
+    /* Interior container */
+    .interior{
+      position:absolute;
+      inset:0;
+      transform-style: preserve-3d;
+      border-radius: var(--radius);
+    }
+
+    /* TOC (left half) */
+    .toc{
+      position:absolute;
+      top:0;
+      left:0;
+      width:50%;
+      height:100%;
+      padding:22px 22px 18px 22px;
+      border-radius: var(--radius) 0 0 var(--radius);
+      transform: translateZ(6px);
+      background:
+        radial-gradient(900px 520px at 30% 15%, rgba(255,255,255,.08), transparent 55%),
+        linear-gradient(180deg, rgba(250,250,255,.95), rgba(238,240,250,.92));
+      color:#0f1428;
+      border:1px solid rgba(255,255,255,.10);
+      overflow:hidden;
+    }
+    .toc::after{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:
+        radial-gradient(460px 340px at 60% 20%, rgba(0,0,0,.06), transparent 60%),
+        repeating-linear-gradient(135deg, rgba(0,0,0,.028) 0 2px, transparent 2px 11px);
+      opacity:.55;
+      pointer-events:none;
+    }
+    .toc .wrap{
+      position:relative;
+      z-index:1;
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    }
+    .toc h2{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.3px;
+    }
+    .toc .sub{
+      margin-top:-6px;
+      font-size:12px;
+      color:rgba(0,0,0,.58);
+      line-height:1.4;
+    }
+    .toc ul{
+      list-style:none;
+      padding:0;
+      margin:8px 0 0 0;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      overflow:auto;
+      padding-right:8px;
+    }
+    .toc li{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      background: rgba(18, 22, 44, .06);
+      border:1px solid rgba(0,0,0,.06);
+    }
+    .toc li .name{
+      font-weight:700;
+      font-size:13px;
+      color: rgba(10, 14, 28, .92);
+      line-height:1.2;
+    }
+    .toc li .hint{
+      position:static;
+      transform:none;
+      background: transparent;
+      border:none;
+      box-shadow:none;
+      padding:0;
+      color: rgba(0,0,0,.45);
+      font-size:12px;
+    }
+    .toc li button{
+      border:none;
+      background: rgba(30, 40, 80, .08);
+      color: rgba(10, 14, 28, .85);
+      padding:7px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:12px;
+      transition: transform .16s var(--easeOut), background .16s var(--easeOut);
+    }
+    .toc li button:hover{ transform: translateY(-1px); background: rgba(30,40,80,.12); }
+    .toc li button:active{ transform: translateY(0px) scale(.99); }
+
+    /* Sheets area (right half) */
+    .sheets{
+      position:absolute;
+      top:0;
+      left:50%;
+      width:50%;
+      height:100%;
+      transform-style: preserve-3d;
+      transform: translateZ(8px);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      overflow: visible;
+      pointer-events:auto;
+    }
+
+    /* Each sheet (a “tờ”): has front/back */
+    .sheet{
+      position:absolute;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      transform-style: preserve-3d;
+      transform-origin: left center; /* (6) REQUIRED */
+      will-change: transform;
+      /* default (not flipped): stacked forward by translateZ */
+      --z: calc((7 - var(--i)) * var(--sheetStep));
+      transform: translateZ(var(--z)) rotateY(0deg);
+      transition: transform 880ms var(--easeInOut);
+    }
+
+    /* Bring to front during turning */
+    .sheet.turning{
+      transform: translateZ(52px) rotateY(-180deg);
+      transition: transform 880ms var(--easeInOut);
+    }
+    .sheet.turningBack{
+      transform: translateZ(52px) rotateY(0deg);
+      transition: transform 880ms var(--easeInOut);
+    }
+
+    /* Flipped state: goes left (but we keep it “under” TOC by pushing Z back) */
+    .sheet.flipped{
+      --zFlip: calc((var(--i) + 1) * var(--sheetStep) * -1);
+      transform: translateZ(var(--zFlip)) rotateY(-180deg);
+    }
+
+    .page{
+      position:absolute;
+      inset:0;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      backface-visibility:hidden;
+      -webkit-backface-visibility:hidden;
+      overflow:hidden;
+      border:1px solid rgba(0,0,0,.08);
+      background:
+        radial-gradient(700px 420px at 30% 20%, rgba(255,255,255,.72), rgba(245,246,252,.92) 35%, rgba(236,238,248,.95)),
+        repeating-linear-gradient(135deg, rgba(0,0,0,.018) 0 2px, transparent 2px 11px);
+      box-shadow: 0 16px 44px rgba(0,0,0,.20);
+      color:#0f1428;
+    }
+
+    .page.back{
+      transform: rotateY(180deg);
+      border-radius: var(--radius) 0 0 var(--radius); /* when flipped it sits on left side */
+    }
+
+    .page .pad{
+      height:100%;
+      padding:22px 20px 18px 20px;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      position:relative;
+      z-index:1;
+    }
+
+    .page .meta{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      color: rgba(0,0,0,.55);
+      font-size:12px;
+    }
+    .page h3{
+      margin:0;
+      font-size:20px;
+      letter-spacing:.2px;
+    }
+    .page p{
+      margin:0;
+      color: rgba(0,0,0,.70);
+      line-height:1.6;
+      font-size:13.5px;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 10px;
+      border-radius:999px;
+      background: rgba(20, 30, 70, .08);
+      border:1px solid rgba(0,0,0,.06);
+      font-size:12px;
+      font-weight:700;
+      color: rgba(10, 14, 28, .85);
+      width:max-content;
+    }
+
+    /* Video card (page 1) */
+    .video-card{
+      margin-top:8px;
+      border-radius: 16px;
+      overflow:hidden;
+      border:1px solid rgba(0,0,0,.10);
+      background: rgba(0,0,0,.06);
+      position:relative;
+      aspect-ratio: 16/9;
+      box-shadow: 0 18px 50px rgba(0,0,0,.18);
+    }
+    .video-card video{
+      width:100%;
+      height:100%;
+      display:block;
+      object-fit: cover;
+      transform: translateZ(0);
+      filter: saturate(1.05) contrast(1.03);
+    }
+    .video-overlay{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      background: radial-gradient(220px 140px at 50% 55%, rgba(0,0,0,.22), rgba(0,0,0,.45));
+      opacity:1;
+      transition: opacity 260ms var(--easeOut);
+      cursor:pointer;
+    }
+    .video-card:hover .video-overlay{
+      opacity: .95;
+    }
+    .play-btn{
+      width:78px; height:78px;
+      border-radius:50%;
+      background: rgba(255,255,255,.14);
+      border:1px solid rgba(255,255,255,.22);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 20px 60px rgba(0,0,0,.30);
+      display:grid;
+      place-items:center;
+      transform: translateZ(0);
+      transition: transform 180ms var(--easeOut);
+    }
+    .video-overlay:hover .play-btn{ transform: scale(1.04); }
+    .triangle{
+      width:0; height:0;
+      border-left: 18px solid rgba(255,255,255,.92);
+      border-top: 11px solid transparent;
+      border-bottom: 11px solid transparent;
+      margin-left: 4px;
+      filter: drop-shadow(0 8px 18px rgba(0,0,0,.25));
+    }
+
+    /* Modal */
+    .modal{
+      position:fixed;
+      inset:0;
+      z-index:50;
+      display:grid;
+      place-items:center;
+      background: rgba(0,0,0,.68);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      opacity:0;
+      visibility:hidden;
+      pointer-events:none;
+      transition: opacity 240ms var(--easeOut), visibility 240ms var(--easeOut);
+    }
+    .modal.show{
+      opacity:1;
+      visibility:visible;
+      pointer-events:auto;
+    }
+    .modal-inner{
+      width:min(1100px, 92vw);
+      aspect-ratio: 16/9;
+      border-radius: 18px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.14);
+      box-shadow: 0 40px 120px rgba(0,0,0,.55);
+      background: rgba(0,0,0,.2);
+      position:relative;
+    }
+    .modal-inner video{
+      width:100%;
+      height:100%;
+      object-fit: contain;
+      background: black;
+      display:block;
+    }
+    .modal-close{
+      position:absolute;
+      top:12px;
+      right:12px;
+      z-index:2;
+      padding:10px 12px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.35);
+      color: rgba(255,255,255,.92);
+      cursor:pointer;
+      font-weight:800;
+      letter-spacing:.2px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: transform .18s var(--easeOut);
+    }
+    .modal-close:hover{ transform: translateY(-1px); }
+    .modal-close:active{ transform: translateY(0px) scale(.99); }
+
+    /* Small helpers */
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 8px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color: rgba(255,255,255,.80);
+      margin: 0 4px;
+    }
+
+    /* Responsiveness */
+    @media (max-width: 720px){
+      :root{ --spineW: 22px; --radius: 16px; }
+      .cover .outer h1{ font-size: 28px; }
+      .hud{ width: calc(100vw - 24px); justify-content: space-between; }
+      .hud .pill{ display:none; }
+      .btn{ padding:10px 12px; }
+      .hint{ width: calc(100vw - 24px); text-align:center; }
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="stars"></canvas>
+  <div class="fx"></div>
+  <div class="vignette"></div>
+
+  <div class="hint">
+    Kéo để <b>nhìn quanh</b> • Click bìa để <b>mở sách</b> •
+    <span class="kbd">←</span>/<span class="kbd">→</span> lật trang
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="book-shell" id="bookShell" aria-label="3D Book Area">
+      <div class="book" id="book" data-state="closed">
+        <!-- (5) Spine -->
+        <div class="spine" aria-hidden="true"></div>
+
+        <!-- Back board (hidden when closed by rules) -->
+        <div class="back-board" aria-hidden="true"></div>
+
+        <!-- Cover -->
+        <div class="cover" id="cover" role="button" tabindex="0" aria-label="Bìa sách (nhấn để mở)">
+          <div class="face outer">
+            <div class="title">
+              <div class="badge"><span class="dot"></span> CUỐN SÁCH 3D</div>
+              <h1>Sản phẩm sáng tạo</h1>
+              <p>Mở bìa để xem mục lục và nội dung. Trang đầu tiên có video (nhấn Play để phóng to).</p>
+            </div>
+            <div class="cta">
+              <span>Click để mở</span>
+              <span><b>8</b> trang • 3D • mượt</span>
+            </div>
+          </div>
+          <div class="face inner">
+            <div class="inside-note">Bìa trong • hiệu ứng 3D thuần CSS + JS</div>
+          </div>
+        </div>
+
+        <!-- Interior (TOC + pages) -->
+        <div class="interior" id="interior">
+          <div class="toc" aria-label="Mục lục">
+            <div class="wrap">
+              <h2>Mục lục</h2>
+              <div class="sub">Chọn nhanh trang (tùy chọn). Trang 1 là video.</div>
+              <ul id="tocList">
+                <!-- JS fill -->
+              </ul>
+              <div style="margin-top:auto; display:flex; gap:10px; align-items:center; color:rgba(0,0,0,.55); font-size:12px;">
+                <span class="chip">Tip</span>
+                <span>Kéo để xoay • Next trang cuối sẽ tự đóng sách</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="sheets" id="sheets" aria-label="Các tờ trang">
+            <!-- 8 sheets (0..7) -->
+            <div class="sheet" style="--i:0" data-i="0">
+              <div class="page front">
+                <div class="pad">
+                  <div class="meta">
+                    <span class="chip">Trang 1 • Video</span>
+                    <span>HCM202 • TK</span>
+                  </div>
+                  <h3>Video mở đầu</h3>
+                  <p>Nhấn Play để xoay ngang cuốn sách rồi mở video fullscreen và tự chạy.</p>
+
+                  <div class="video-card" id="videoCard" role="button" tabindex="0" aria-label="Phát video fullscreen">
+                    <!-- One video element that will be moved in/out modal -->
+                    <video id="videoEl" preload="metadata" playsinline>
+                      <!-- Placeholder first, then fallback (so bạn có thể thay sau) -->
+                      <source src="Video/HCM202-TK.mp4" type="video/mp4">
+                      <source src="Video/HCM202TK.mp4" type="video/mp4">
+                    </video>
+                    <div class="video-overlay" id="videoOverlay">
+                      <div class="play-btn"><div class="triangle"></div></div>
+                    </div>
+                  </div>
+
+                  <p style="margin-top:auto;">
+                    <span class="chip">Gợi ý</span>
+                    <span>Video đặt cùng thư mục /Video. Nếu tên khác, chỉ cần đổi path trong HTML.</span>
+                  </p>
+                </div>
+              </div>
+              <div class="page back">
+                <div class="pad">
+                  <div class="meta">
+                    <span class="chip">Mặt sau</span>
+                    <span>Ghi chú</span>
+                  </div>
+                  <h3>Ghi chú trang video</h3>
+                  <p>Phần này là mặt sau của “tờ” số 0. Bạn có thể thay nội dung tùy ý.</p>
+                  <p style="margin-top:auto; opacity:.85;">Tip: Lật trang để xem các nội dung tiếp theo.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="sheet" style="--i:1" data-i="1">
+              <div class="page front">
+                <div class="pad">
+                  <div class="meta">
+                    <span class="chip">Trang 2</span>
+                    <span>Tổng quan</span>
+                  </div>
+                  <h3>Mục tiêu &amp; Ý tưởng</h3>
+                  <p>Nêu ngắn gọn mục tiêu của sản phẩm, đối tượng người dùng, và giá trị mang lại.</p>
+                  <p>Gợi ý cấu trúc: Bối cảnh → Vấn đề → Giải pháp → Kết quả kỳ vọng.</p>
+                  <p style="margin-top:auto;">
+                    <span class="chip">Key</span>
+                    <span>“Đơn giản nhưng có chiều sâu.”</span>
+                  </p>
+                </div>
+              </div>
+              <div class="page back">
+                <div class="pad">
+                  <div class="meta">
+                    <span class="chip">Mặt sau</span>
+                    <span>Gạch đầu dòng</span>
+                  </div>
+                  <h3>Điểm nhấn</h3>
+                  <p>• 3D flip thuần CSS/JS<br>• State machine rõ ràng<br>• Không “lòi” trang khi đóng</p>
+                  <p style="margin-top:auto; opacity:.85;">Bạn có thể thay thành nội dung trang 3 nếu thích.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="sheet" style="--i:2" data-i="2">
+              <div class="page front">
+                <div class="pad">
+                  <div class="meta">
+                    <span class="chip">Trang 3</span>
+                    <span>Nội dung</span>
+                  </div>
+                  <h3>Thiết kế &amp; Trải nghiệm</h3>
+                  <p>Mô tả UI: nền vũ trụ, sách ở trung tâm, mở bìa chậm rãi, lật trang mượt.</p>
+                  <p>Mô tả UX: điều hướng Prev/Next, chỉ số trang, modal video, kéo để nhìn quanh.</p>
+                  <p style="margin-top:auto;">
+                    <span class="chip">UX</span>
+                    <span>“Tương tác ít, cảm giác nhiều.”</span>
+                  </p>
+                </div>
+              </div>
+              <div class="page back">
+                <div class="pad">
+                  <div class="meta"><span class="chip">Mặt sau</span><span>Ghi chú</span></div>
+                  <h3>Checklist</h3>
+                  <p>• Easing cubic-bezier mượt<br>• Layering bằng translateZ<br>• Closed state ẩn tuyệt đối</p>
+                  <p style="margin-top:auto; opacity:.85;">Có thể dùng phần này làm “nháp” khi thuyết trình.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="sheet" style="--i:3" data-i="3">
+              <div class="page front">
+                <div class="pad">
+                  <div class="meta"><span class="chip">Trang 4</span><span>Giải pháp</span></div>
+                  <h3>Luồng hoạt động</h3>
+                  <p>1) Mở sách → 2) Xem TOC + trang hiện tại → 3) Lật trang → 4) Trang cuối tự đóng.</p>
+                  <p>Video: click → sách “xoay ngang” → modal fullscreen autoplay → đóng modal quay lại.</p>
+                  <p style="margin-top:auto;"><span class="chip">Flow</span> <span>Trực quan, không rối.</span></p>
+                </div>
+              </div>
+              <div class="page back">
+                <div class="pad">
+                  <div class="meta"><span class="chip">Mặt sau</span><span>Ghi chú</span></div>
+                  <h3>Gợi ý nội dung</h3>
+                  <p>Đặt các heading/paragraph theo bố cục: tiêu đề → 2-4 ý chính → highlight.</p>
+                  <p style="margin-top:auto; opacity:.85;">Tùy chỉnh thêm ảnh/icon nếu cần.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="sheet" style="--i:4" data-i="4">
+              <div class="page front">
+                <div class="pad">
+                  <div class="meta"><span class="chip">Trang 5</span><span>Demo</span></div>
+                  <h3>Chức năng nổi bật</h3>
+                  <p>• Drag/hover tilt giới hạn góc<br>• Prev/Next + page index<br>• Modal video + autoplay/pause</p>
+                  <p style="margin-top:auto;"><span class="chip">Note</span> <span>Không dùng turn.js hay lib lật sách.</span></p>
+                </div>
+              </div>
+              <div class="page back">
+                <div class="pad">
+                  <div class="meta"><span class="chip">Mặt sau</span><span>Ngoại lệ</span></div>
+                  <h3>Fallback</h3>
+                  <p>Nếu trình duyệt hạn chế autoplay: video vẫn play khi có thao tác click (đã có).</p>
+                  <p style="margin-top:auto; opacity:.85;">Có thể thêm poster nếu muốn.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="sheet" style="--i:5" data-i="5">
+              <div class="page front">
+                <div class="pad">
+                  <div class="meta"><span class="chip">Trang 6</span><span>Chi tiết</span></div>
+                  <h3>Kỹ thuật 3D</h3>
+                  <p>• Scene perspective 2000px<br>• Book preserve-3d<br>• Sheet flip rotateY(-180deg) origin left center</p>
+                  <p style="margin-top:auto;"><span class="chip">3D</span> <span>translateZ + transition easing</span></p>
+                </div>
+              </div>
+              <div class="page back">
+                <div class="pad">
+                  <div class="meta"><span class="chip">Mặt sau</span><span>Tip</span></div>
+                  <h3>Layering</h3>
+                  <p>Trong lúc lật, sheet được “đẩy” translateZ lên trước để tránh chồng sai.</p>
+                  <p style="margin-top:auto; opacity:.85;">Sau khi lật xong, đưa sheet xuống Z âm để không che TOC quá nhiều.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="sheet" style="--i:6" data-i="6">
+              <div class="page front">
+                <div class="pad">
+                  <div class="meta"><span class="chip">Trang 7</span><span>Tham khảo</span></div>
+                  <h3>Nội dung bổ sung</h3>
+                  <p>Chèn hình ảnh, số liệu, hoặc nội dung bạn muốn trình bày. Đây là trang trống “đẹp” để bạn điền.</p>
+                  <p style="margin-top:auto;"><span class="chip">Tip</span> <span>Giữ nội dung ngắn để đọc nhanh.</span></p>
+                </div>
+              </div>
+              <div class="page back">
+                <div class="pad">
+                  <div class="meta"><span class="chip">Mặt sau</span><span>Ghi chú</span></div>
+                  <h3>Ghi chú</h3>
+                  <p>Điền nội dung tuỳ bạn.</p>
+                  <p style="margin-top:auto; opacity:.85;">Trang tiếp theo là trang cuối.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="sheet" style="--i:7" data-i="7">
+              <div class="page front">
+                <div class="pad">
+                  <div class="meta"><span class="chip">Trang 8</span><span>Tài liệu</span></div>
+                  <h3>Tài liệu tham khảo</h3>
+                  <p>• Link 1: …<br>• Link 2: …<br>• Link 3: …</p>
+                  <p>Gợi ý: liệt kê nguồn ảnh/video/tài liệu, format gọn gàng.</p>
+                  <p style="margin-top:auto;"><span class="chip">Kết</span> <span>Nhấn Next ở trang này để tự đóng sách.</span></p>
+                </div>
+              </div>
+              <div class="page back">
+                <div class="pad">
+                  <div class="meta"><span class="chip">Mặt sau</span><span>Hết</span></div>
+                  <h3>Hết sách</h3>
+                  <p>Nhấn Next để đóng. Hoặc Prev để quay lại.</p>
+                  <p style="margin-top:auto; opacity:.85;">Cảm ơn bạn đã xem!</p>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /sheets -->
+        </div><!-- /interior -->
+      </div><!-- /book -->
+    </div><!-- /book-shell -->
+  </div><!-- /stage -->
+
+  <div class="hud" role="toolbar" aria-label="Điều khiển">
+    <button class="btn ghost" id="prevBtn" disabled>Prev</button>
+    <button class="btn" id="nextBtn">Open</button>
+    <div class="pill" aria-live="polite">
+      <span class="label">Trang</span>
+      <span class="value" id="pageLabel">0/8</span>
+    </div>
+    <button class="btn ghost" id="closeBtn" disabled>Close</button>
+  </div>
+
+  <!-- Modal fullscreen video -->
+  <div class="modal" id="videoModal" aria-hidden="true">
+    <div class="modal-inner" role="dialog" aria-modal="true" aria-label="Video fullscreen">
+      <button class="modal-close" id="modalCloseBtn">✕ Đóng</button>
+      <!-- video element will be moved here -->
+      <div id="modalVideoHost" style="width:100%; height:100%;"></div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================
+       Starfield canvas (space vibe, not “code simple”)
+    ========================================================= */
+    (function(){
+      const canvas = document.getElementById('stars');
+      const ctx = canvas.getContext('2d', { alpha: true });
+      let w=0,h=0,dpr=1;
+      const stars = [];
+      const STAR_COUNT = 260;
+      let mx = 0, my = 0; // mouse normalized
+
+      function resize(){
+        dpr = Math.min(2, window.devicePixelRatio || 1);
+        w = canvas.width = Math.floor(window.innerWidth * dpr);
+        h = canvas.height = Math.floor(window.innerHeight * dpr);
+        canvas.style.width = window.innerWidth + 'px';
+        canvas.style.height = window.innerHeight + 'px';
+        stars.length = 0;
+        for(let i=0;i<STAR_COUNT;i++){
+          stars.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: (Math.random() ** 2) * 1.8 + 0.2,
+            tw: Math.random() * Math.PI * 2,
+            sp: 0.15 + Math.random() * 0.55,
+            a: 0.35 + Math.random() * 0.65
+          });
+        }
+      }
+
+      function draw(t){
+        ctx.clearRect(0,0,w,h);
+
+        // soft space haze
+        ctx.globalAlpha = 0.55;
+        const g = ctx.createRadialGradient(w*0.25, h*0.35, 0, w*0.25, h*0.35, Math.max(w,h)*0.65);
+        g.addColorStop(0, 'rgba(120,80,255,0.18)');
+        g.addColorStop(0.45, 'rgba(40,140,255,0.10)');
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0,0,w,h);
+
+        ctx.globalAlpha = 1;
+        for(const s of stars){
+          s.tw += 0.015 * s.sp;
+          const twinkle = 0.65 + Math.sin(s.tw) * 0.35;
+
+          const px = s.x + mx * 18 * dpr;
+          const py = s.y + my * 12 * dpr;
+
+          ctx.beginPath();
+          ctx.globalAlpha = s.a * twinkle;
+          ctx.fillStyle = 'rgba(255,255,255,1)';
+          ctx.arc(px, py, s.r * dpr, 0, Math.PI*2);
+          ctx.fill();
+
+          // tiny glow for bigger stars
+          if(s.r > 1.2){
+            ctx.globalAlpha = (s.a * twinkle) * 0.20;
+            ctx.beginPath();
+            ctx.arc(px, py, (s.r * 5.0) * dpr, 0, Math.PI*2);
+            ctx.fill();
+          }
+        }
+
+        requestAnimationFrame(draw);
+      }
+
+      window.addEventListener('resize', resize, { passive:true });
+      window.addEventListener('mousemove', (e)=>{
+        const nx = (e.clientX / window.innerWidth) * 2 - 1;
+        const ny = (e.clientY / window.innerHeight) * 2 - 1;
+        mx = nx;
+        my = ny;
+      }, { passive:true });
+
+      resize();
+      requestAnimationFrame(draw);
+    })();
+
+    /* =========================================================
+       3D Book State Machine (REQUIRED)
+       isOpen, currentPage + openBook(), closeBook(), flipNext(), flipPrev()
+    ========================================================= */
+    const bookShell = document.getElementById('bookShell');
+    const book = document.getElementById('book');
+    const cover = document.getElementById('cover');
+    const sheetsWrap = document.getElementById('sheets');
+    const sheets = Array.from(sheetsWrap.querySelectorAll('.sheet'));
+
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const closeBtn = document.getElementById('closeBtn');
+    const pageLabel = document.getElementById('pageLabel');
+
+    const tocList = document.getElementById('tocList');
+
+    const videoCard = document.getElementById('videoCard');
+    const videoOverlay = document.getElementById('videoOverlay');
+    const videoEl = document.getElementById('videoEl');
+
+    const videoModal = document.getElementById('videoModal');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const modalVideoHost = document.getElementById('modalVideoHost');
+    const originalVideoParent = videoEl.parentElement;
+
+    // State machine
+    let isOpen = false;
+    let currentPage = 0; // 0..7 => display Trang (currentPage+1)/8
+    let isAnimating = false;
+    let isVideoMode = false;
+
+    // Helpers
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function updateUI(){
+      pageLabel.textContent = `${Math.min(currentPage + 1, sheets.length)}/${sheets.length}`;
+
+      prevBtn.disabled = !isOpen || isAnimating || currentPage === 0 || isVideoMode;
+      closeBtn.disabled = !isOpen || isAnimating || isVideoMode;
+
+      if(!isOpen){
+        nextBtn.textContent = 'Open';
+        nextBtn.disabled = isAnimating;
+      }else{
+        nextBtn.textContent = (currentPage === sheets.length - 1) ? 'Next (Close)' : 'Next';
+        nextBtn.disabled = isAnimating || isVideoMode;
+      }
+    }
+
+    function setReveal(on){
+      if(on) book.classList.add('reveal');
+      else book.classList.remove('reveal');
+    }
+
+    function applyOpenPose(on){
+      bookShell.classList.toggle('open-pose', !!on);
+    }
+
+    // Initialize TOC
+    const tocTitles = [
+      'Trang 1: Video mở đầu',
+      'Trang 2: Tổng quan',
+      'Trang 3: Thiết kế & Trải nghiệm',
+      'Trang 4: Luồng hoạt động',
+      'Trang 5: Chức năng nổi bật',
+      'Trang 6: Kỹ thuật 3D',
+      'Trang 7: Nội dung bổ sung',
+      'Trang 8: Tài liệu tham khảo'
+    ];
+
+    function buildTOC(){
+      tocList.innerHTML = '';
+      tocTitles.forEach((t, i)=>{
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div>
+            <div class="name">${t}</div>
+            <div class="hint">Trang ${i+1}/8</div>
+          </div>
+          <button type="button" data-go="${i}">Đi</button>
+        `;
+        tocList.appendChild(li);
+      });
+
+      tocList.addEventListener('click', async (e)=>{
+        const btn = e.target.closest('button[data-go]');
+        if(!btn) return;
+        const target = Number(btn.dataset.go);
+        if(Number.isNaN(target)) return;
+
+        if(!isOpen) await openBook();
+        if(isAnimating || isVideoMode) return;
+
+        // Simple sequential flipping to target (no extra API required)
+        if(target > currentPage){
+          while(currentPage < target){
+            await flipNext();
+            await sleep(90);
+          }
+        }else if(target < currentPage){
+          while(currentPage > target){
+            await flipPrev();
+            await sleep(90);
+          }
+        }
+      });
+    }
+    buildTOC();
+
+    // Ensure sheet classes reflect currentPage
+    function syncSheets(){
+      sheets.forEach((s, i)=>{
+        if(i < currentPage) s.classList.add('flipped');
+        else s.classList.remove('flipped');
+        s.classList.remove('turning', 'turningBack');
+      });
+    }
+
+    async function openBook(){
+      if(isAnimating || isOpen) return;
+      isAnimating = true;
+      updateUI();
+
+      // Closed must never leak: keep reveal off until cover is mid-open
+      setReveal(false);
+
+      // Set opened state (cover starts moving)
+      book.dataset.state = 'opened';
+      applyOpenPose(true);
+
+      // Reveal interior after a short delay (cover still masks most)
+      await sleep(460);
+      setReveal(true);
+
+      // Finish timing
+      await sleep(720);
+      isOpen = true;
+      currentPage = 0;
+      syncSheets();
+      isAnimating = false;
+      updateUI();
+    }
+
+    async function closeBook(){
+      if(isAnimating || !isOpen) return;
+      isAnimating = true;
+      updateUI();
+
+      // If video modal open, close it first
+      if(isVideoMode){
+        await closeVideoModal();
+      }
+
+      // Hide interior early to guarantee no “lòi” while cover closing
+      setReveal(false);
+
+      // Unflip any flipped sheets back to right, sequentially (reverse)
+      // Note: even though interior hidden, we still reset states for correctness
+      for(let i = currentPage - 1; i >= 0; i--){
+        const sheet = sheets[i];
+        sheet.classList.add('turningBack');
+        await sleep(16);
+        sheet.classList.remove('flipped');
+        await waitForTransition(sheet, 920);
+        sheet.classList.remove('turningBack');
+        await sleep(80);
+      }
+
+      currentPage = 0;
+      syncSheets();
+
+      // Close cover
+      book.dataset.state = 'closed';
+      applyOpenPose(false);
+
+      await sleep(1120);
+
+      isOpen = false;
+      isAnimating = false;
+      updateUI();
+    }
+
+    function waitForTransition(el, fallbackMs=900){
+      return new Promise((resolve)=>{
+        let done = false;
+        const t = setTimeout(()=>{
+          if(done) return;
+          done = true;
+          resolve();
+        }, fallbackMs);
+
+        el.addEventListener('transitionend', (ev)=>{
+          if(done) return;
+          if(ev.propertyName !== 'transform') return;
+          done = true;
+          clearTimeout(t);
+          resolve();
+        }, { once:true });
+      });
+    }
+
+    async function flipNext(){
+      // (9) REQUIRED API
+      if(isAnimating) return;
+      if(!isOpen){
+        await openBook();
+        return;
+      }
+      if(isVideoMode) return;
+
+      if(currentPage >= sheets.length - 1){
+        // (8) Next at last page => closeBook()
+        await closeBook();
+        return;
+      }
+
+      isAnimating = true;
+      updateUI();
+
+      const sheet = sheets[currentPage];
+
+      // Turn forward: raise Z then rotate -180
+      sheet.classList.add('turning');
+      await sleep(16);
+      sheet.classList.add('flipped');
+
+      await waitForTransition(sheet, 920);
+      sheet.classList.remove('turning');
+
+      currentPage++;
+      syncSheets();
+
+      isAnimating = false;
+      updateUI();
+    }
+
+    async function flipPrev(){
+      // (9) REQUIRED API
+      if(isAnimating) return;
+      if(!isOpen || isVideoMode) return;
+      if(currentPage <= 0) return;
+
+      isAnimating = true;
+      updateUI();
+
+      const prevIndex = currentPage - 1;
+      const sheet = sheets[prevIndex];
+
+      // Turn back: raise Z then rotate back to 0
+      sheet.classList.add('turningBack');
+      await sleep(16);
+      sheet.classList.remove('flipped');
+
+      await waitForTransition(sheet, 920);
+      sheet.classList.remove('turningBack');
+
+      currentPage--;
+      syncSheets();
+
+      isAnimating = false;
+      updateUI();
+    }
+
+    // Expose required functions (optional but handy)
+    window.openBook = openBook;
+    window.closeBook = closeBook;
+    window.flipNext = flipNext;
+    window.flipPrev = flipPrev;
+
+    // Click cover to open
+    cover.addEventListener('click', ()=>{
+      if(!isOpen && !isAnimating) openBook();
+    });
+    cover.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        if(!isOpen && !isAnimating) openBook();
+      }
+    });
+
+    // Buttons
+    prevBtn.addEventListener('click', flipPrev);
+    nextBtn.addEventListener('click', async ()=>{
+      if(!isOpen) await openBook();
+      else await flipNext();
+    });
+    closeBtn.addEventListener('click', closeBook);
+
+    // Keyboard
+    window.addEventListener('keydown', async (e)=>{
+      if(isVideoMode && e.key === 'Escape'){ await closeVideoModal(); return; }
+      if(e.key === 'ArrowRight'){ e.preventDefault(); await flipNext(); }
+      if(e.key === 'ArrowLeft'){ e.preventDefault(); await flipPrev(); }
+      if(e.key === 'Escape'){ if(isOpen) await closeBook(); }
+    });
+
+    /* =========================================================
+       Look-around interaction (drag/hover)
+    ========================================================= */
+    const tilt = {
+      dragging:false,
+      lastX:0, lastY:0,
+      uRy:0, uRx:0,
+      targetRy:0, targetRx:0
+    };
+
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+    function setUserTilt(rxDeg, ryDeg){
+      bookShell.style.setProperty('--uRx', rxDeg.toFixed(2) + 'deg');
+      bookShell.style.setProperty('--uRy', ryDeg.toFixed(2) + 'deg');
+    }
+
+    function limits(){
+      // tighter limits when closed to guarantee no accidental leaks
+      if(!isOpen) return { rx: 9, ry: 14 };
+      return { rx: 12, ry: 18 };
+    }
+
+    function onPointerMove(clientX, clientY){
+      if(isAnimating || isVideoMode) return;
+
+      const rect = bookShell.getBoundingClientRect();
+      const cx = rect.left + rect.width/2;
+      const cy = rect.top + rect.height/2;
+
+      const nx = (clientX - cx) / (rect.width/2);
+      const ny = (clientY - cy) / (rect.height/2);
+
+      const lim = limits();
+      // hover target
+      tilt.targetRy = clamp(nx * lim.ry, -lim.ry, lim.ry);
+      tilt.targetRx = clamp(-ny * lim.rx, -lim.rx, lim.rx);
+    }
+
+    function animateTilt(){
+      // smooth follow
+      tilt.uRy += (tilt.targetRy - tilt.uRy) * 0.12;
+      tilt.uRx += (tilt.targetRx - tilt.uRx) * 0.12;
+      setUserTilt(tilt.uRx, tilt.uRy);
+      requestAnimationFrame(animateTilt);
+    }
+    requestAnimationFrame(animateTilt);
+
+    bookShell.addEventListener('pointerdown', (e)=>{
+      if(isAnimating || isVideoMode) return;
+      tilt.dragging = true;
+      tilt.lastX = e.clientX;
+      tilt.lastY = e.clientY;
+      bookShell.setPointerCapture(e.pointerId);
+    });
+
+    bookShell.addEventListener('pointermove', (e)=>{
+      if(isAnimating || isVideoMode) return;
+
+      if(tilt.dragging){
+        const dx = e.clientX - tilt.lastX;
+        const dy = e.clientY - tilt.lastY;
+        tilt.lastX = e.clientX;
+        tilt.lastY = e.clientY;
+
+        const lim = limits();
+        tilt.targetRy = clamp(tilt.targetRy + dx * 0.06, -lim.ry, lim.ry);
+        tilt.targetRx = clamp(tilt.targetRx - dy * 0.06, -lim.rx, lim.rx);
+      }else{
+        onPointerMove(e.clientX, e.clientY);
+      }
+    });
+
+    bookShell.addEventListener('pointerup', ()=>{
+      tilt.dragging = false;
+    });
+    bookShell.addEventListener('pointercancel', ()=>{
+      tilt.dragging = false;
+    });
+    bookShell.addEventListener('mouseleave', ()=>{
+      if(!tilt.dragging){
+        tilt.targetRy = 0;
+        tilt.targetRx = 0;
+      }
+    });
+
+    /* =========================================================
+       Video: rotate book first, then modal fullscreen autoplay
+       Close modal => pause + restore pose
+    ========================================================= */
+    async function openVideoModal(){
+      if(isAnimating || isVideoMode) return;
+      if(!isOpen) await openBook();
+
+      // Step (a): rotate book (600–900ms)
+      isVideoMode = true;
+      updateUI();
+
+      bookShell.classList.add('video-pose');
+      await sleep(780);
+
+      // Move the same video element into modal host
+      modalVideoHost.appendChild(videoEl);
+
+      // Step (b): show modal + autoplay
+      videoModal.classList.add('show');
+      videoModal.setAttribute('aria-hidden', 'false');
+
+      try{
+        // Some browsers need muted for autoplay; but this is user gesture, so should be fine
+        videoEl.controls = true;
+        await videoEl.play();
+      }catch(err){
+        // If autoplay fails, user can press play manually
+        videoEl.controls = true;
+      }
+    }
+
+    async function closeVideoModal(){
+      if(!isVideoMode) return;
+
+      // Step (c): close modal => pause video + restore
+      try{ videoEl.pause(); }catch(e){}
+
+      videoModal.classList.remove('show');
+      videoModal.setAttribute('aria-hidden', 'true');
+
+      // Move video back to page card
+      originalVideoParent.insertBefore(videoEl, originalVideoParent.firstChild);
+
+      // restore pose
+      await sleep(180);
+      bookShell.classList.remove('video-pose');
+
+      await sleep(540);
+      isVideoMode = false;
+      updateUI();
+    }
+
+    videoOverlay.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      openVideoModal();
+    });
+    videoCard.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault();
+        openVideoModal();
+      }
+    });
+
+    modalCloseBtn.addEventListener('click', closeVideoModal);
+    videoModal.addEventListener('click', (e)=>{
+      if(e.target === videoModal) closeVideoModal();
+    });
+
+    // Safety: prevent video from playing in background if tab hidden
+    document.addEventListener('visibilitychange', ()=>{
+      if(document.hidden && isVideoMode){
+        try{ videoEl.pause(); }catch(e){}
+      }
+    });
+
+    // Initial UI
+    setReveal(false);
+    syncSheets();
+    updateUI();
+  </script>
+</body>
+</html>
