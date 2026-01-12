@@ -1,0 +1,1511 @@
+<!doctype html>
+<html lang="vi">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sản phẩm sáng tạo - Cuốn sách 3D</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&amp;family=Crimson+Text:ital,wght@0,400;0,600;1,400&amp;family=Montserrat:wght@300;400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Crimson Text', Georgia, serif;
+    }
+
+    /* Universe Background */
+    .universe {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center, #1a1a2e 0%, #0f0f1a 50%, #050510 100%);
+      overflow: hidden;
+    }
+
+    .stars {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+    }
+
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle var(--duration) ease-in-out infinite;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: var(--min-opacity); transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+
+    .nebula {
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.15;
+    }
+
+    .nebula-1 {
+      top: -200px;
+      right: -100px;
+      background: radial-gradient(circle, #6366f1, #8b5cf6, transparent);
+    }
+
+    .nebula-2 {
+      bottom: -300px;
+      left: -200px;
+      background: radial-gradient(circle, #ec4899, #f43f5e, transparent);
+    }
+
+    /* Scene Container */
+    .scene-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      perspective: 2000px;
+    }
+
+    /* Book Wrapper for rotation */
+    .book-wrapper {
+      transform-style: preserve-3d;
+      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .book-wrapper.rotated {
+      transform: rotateZ(90deg) scale(0.8);
+    }
+
+    /* 3D Book */
+    .book {
+      position: relative;
+      width: 600px;
+      height: 420px;
+      transform-style: preserve-3d;
+      transition: transform 0.6s ease;
+    }
+
+    /* Cover - Front */
+    .cover-front {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #2c1810 0%, #4a2c17 30%, #6b3a1f 60%, #4a2c17 100%);
+      border-radius: 0 8px 8px 0;
+      transform-origin: left center;
+      transform-style: preserve-3d;
+      transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      z-index: 100;
+      box-shadow: 
+        5px 5px 20px rgba(0,0,0,0.5),
+        inset -3px 0 10px rgba(0,0,0,0.3),
+        inset 3px 0 10px rgba(255,255,255,0.05);
+    }
+
+    .cover-front::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        repeating-linear-gradient(90deg, transparent 0px, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px),
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+      border-radius: 0 8px 8px 0;
+      pointer-events: none;
+    }
+
+    .cover-front::after {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      border: 2px solid rgba(212, 175, 55, 0.4);
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    .cover-content {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #d4af37;
+      z-index: 2;
+      backface-visibility: hidden;
+    }
+
+    .cover-ornament {
+      font-size: 32px;
+      margin-bottom: 15px;
+      opacity: 0.8;
+    }
+
+    .cover-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      font-weight: 700;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+    }
+
+    .cover-subtitle {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 12px;
+      font-weight: 300;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      opacity: 0.8;
+    }
+
+    .cover-year {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 14px;
+      color: rgba(212, 175, 55, 0.6);
+    }
+
+    /* Cover Back (inside of front cover) */
+    .cover-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(180deg, #f5e6d3 0%, #e8d4bc 100%);
+      transform: rotateY(180deg);
+      backface-visibility: hidden;
+      border-radius: 8px 0 0 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 30px;
+    }
+
+    .cover-back-content {
+      text-align: center;
+      color: #5a4a3a;
+    }
+
+    .cover-back-content h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #3d2914;
+    }
+
+    .cover-back-content p {
+      font-size: 14px;
+      line-height: 1.8;
+      opacity: 0.8;
+    }
+
+    /* Spine */
+    .spine {
+      position: absolute;
+      width: 40px;
+      height: 100%;
+      left: -40px;
+      background: linear-gradient(90deg, #1a0f08 0%, #3d2914 50%, #2c1810 100%);
+      transform: rotateY(-90deg);
+      transform-origin: right center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    .spine-title {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      transform: rotate(180deg);
+      color: #d4af37;
+      font-family: 'Playfair Display', serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+
+    /* Back Board */
+    .back-board {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #2c1810 0%, #3d2914 50%, #2c1810 100%);
+      transform: translateZ(-40px);
+      border-radius: 0 8px 8px 0;
+      box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+      visibility: hidden;
+      opacity: 0;
+      transition: visibility 0s 0.6s, opacity 0.3s;
+    }
+
+    /* Pages Container */
+    .pages-container {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      visibility: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: visibility 0s 0.6s, opacity 0.3s;
+    }
+
+    /* TOC (Left side when open) */
+    .toc-panel {
+      position: absolute;
+      width: 50%;
+      height: 100%;
+      left: 0;
+      background: linear-gradient(180deg, #faf6f0 0%, #f0e6d8 100%);
+      padding: 25px;
+      overflow-y: auto;
+      border-right: 1px solid rgba(0,0,0,0.1);
+      transform: translateZ(1px);
+    }
+
+    .toc-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      color: #3d2914;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #d4af37;
+      text-align: center;
+    }
+
+    .toc-list {
+      list-style: none;
+    }
+
+    .toc-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 8px;
+      margin-bottom: 5px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.3s ease;
+      font-size: 13px;
+      color: #5a4a3a;
+    }
+
+    .toc-item:hover {
+      background: rgba(212, 175, 55, 0.15);
+      transform: translateX(5px);
+    }
+
+    .toc-item.active {
+      background: rgba(212, 175, 55, 0.25);
+      color: #3d2914;
+      font-weight: 600;
+    }
+
+    .toc-number {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      width: 24px;
+      height: 24px;
+      background: #d4af37;
+      color: white;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 600;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+
+    .toc-text {
+      flex: 1;
+    }
+
+    /* Pages */
+    .page {
+      position: absolute;
+      width: 50%;
+      height: 100%;
+      right: 0;
+      transform-style: preserve-3d;
+      transform-origin: left center;
+      transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: default;
+    }
+
+    .page.flipped {
+      transform: rotateY(-180deg);
+    }
+
+    .page-front, .page-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      background: linear-gradient(180deg, #fdfbf7 0%, #f8f4ec 100%);
+      padding: 25px;
+      overflow-y: auto;
+      border-left: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .page-front {
+      box-shadow: 
+        -2px 0 10px rgba(0,0,0,0.05),
+        inset 2px 0 5px rgba(0,0,0,0.02);
+    }
+
+    .page-back {
+      transform: rotateY(180deg);
+      box-shadow: 
+        2px 0 10px rgba(0,0,0,0.05),
+        inset -2px 0 5px rgba(0,0,0,0.02);
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+    }
+
+    .page-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      color: #3d2914;
+    }
+
+    .page-number {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px;
+      color: #999;
+    }
+
+    .page-content {
+      font-size: 14px;
+      line-height: 1.8;
+      color: #4a4a4a;
+    }
+
+    .page-content h4 {
+      font-family: 'Playfair Display', serif;
+      color: #3d2914;
+      margin: 15px 0 10px;
+      font-size: 16px;
+    }
+
+    .page-content p {
+      margin-bottom: 12px;
+      text-align: justify;
+    }
+
+    .page-content ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+
+    .page-content li {
+      margin-bottom: 6px;
+    }
+
+    /* Video Page */
+    .video-container {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 15px 0;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .video-container video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .video-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .video-overlay:hover {
+      background: rgba(0,0,0,0.2);
+    }
+
+    .play-button {
+      width: 60px;
+      height: 60px;
+      background: rgba(212, 175, 55, 0.9);
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: transform 0.3s, background 0.3s;
+    }
+
+    .play-button:hover {
+      transform: scale(1.1);
+      background: #d4af37;
+    }
+
+    .play-button svg {
+      width: 24px;
+      height: 24px;
+      fill: white;
+      margin-left: 4px;
+    }
+
+    /* References Page */
+    .ref-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .ref-item {
+      display: flex;
+      align-items: flex-start;
+      padding: 12px;
+      background: rgba(212, 175, 55, 0.08);
+      border-radius: 8px;
+      border-left: 3px solid #d4af37;
+      transition: all 0.3s ease;
+    }
+
+    .ref-item:hover {
+      background: rgba(212, 175, 55, 0.15);
+      transform: translateX(5px);
+    }
+
+    .ref-icon {
+      font-size: 24px;
+      margin-right: 12px;
+      flex-shrink: 0;
+    }
+
+    .ref-content {
+      flex: 1;
+    }
+
+    .ref-title {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      color: #3d2914;
+      margin-bottom: 4px;
+    }
+
+    .ref-desc {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .ref-link {
+      display: inline-flex;
+      align-items: center;
+      font-size: 11px;
+      color: #d4af37;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+
+    .ref-link:hover {
+      color: #b8972e;
+      text-decoration: underline;
+    }
+
+    .ref-link svg {
+      width: 12px;
+      height: 12px;
+      margin-left: 4px;
+    }
+
+    /* Controls */
+    .controls {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 12px 25px;
+      background: rgba(20, 15, 10, 0.85);
+      backdrop-filter: blur(10px);
+      border-radius: 50px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.4s ease;
+      z-index: 200;
+    }
+
+    .controls.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .ctrl-btn {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 40px;
+      height: 40px;
+      background: transparent;
+      border: 2px solid rgba(212, 175, 55, 0.5);
+      border-radius: 50%;
+      color: #d4af37;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 16px;
+    }
+
+    .ctrl-btn:hover:not(:disabled) {
+      background: #d4af37;
+      color: #1a0f08;
+      border-color: #d4af37;
+    }
+
+    .ctrl-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .ctrl-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    .page-indicator {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 13px;
+      color: rgba(255,255,255,0.8);
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .close-btn {
+      padding: 8px 16px;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px;
+      color: rgba(255,255,255,0.7);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .close-btn:hover {
+      background: rgba(255,255,255,0.1);
+      color: white;
+    }
+
+    /* Open Instruction */
+    .open-hint {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      text-align: center;
+      animation: pulse 2s ease-in-out infinite;
+      z-index: 50;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    /* Video Modal */
+    .video-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.95);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.4s ease;
+    }
+
+    .video-modal.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-content {
+      position: relative;
+      width: 90%;
+      max-width: 1200px;
+      aspect-ratio: 16/9;
+    }
+
+    .modal-content video {
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: -50px;
+      right: 0;
+      width: 40px;
+      height: 40px;
+      background: rgba(255,255,255,0.1);
+      border: none;
+      border-radius: 50%;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    .modal-close:hover {
+      background: rgba(255,255,255,0.2);
+      transform: rotate(90deg);
+    }
+
+    /* States */
+    .book.open .cover-front {
+      width: 50%;
+      left: 50%;
+      transform: rotateY(-180deg);
+    }
+
+    .book.open .pages-container,
+    .book.open .back-board {
+      visibility: visible;
+      opacity: 1;
+      pointer-events: auto;
+      transition: visibility 0s 0s, opacity 0.3s 0.6s;
+    }
+
+    /* Page layering */
+    .page { z-index: 10; }
+    
+    .page:nth-child(1) { z-index: 18; }
+    .page:nth-child(2) { z-index: 17; }
+    .page:nth-child(3) { z-index: 16; }
+    .page:nth-child(4) { z-index: 15; }
+    .page:nth-child(5) { z-index: 14; }
+    .page:nth-child(6) { z-index: 13; }
+    .page:nth-child(7) { z-index: 12; }
+    .page:nth-child(8) { z-index: 11; }
+
+    .page.flipped {
+      z-index: 5 !important;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.05);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(212, 175, 55, 0.4);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(212, 175, 55, 0.6);
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body><!-- Universe Background -->
+  <div class="universe">
+   <div class="stars" id="stars"></div>
+   <div class="nebula nebula-1"></div>
+   <div class="nebula nebula-2"></div>
+  </div><!-- Scene Container -->
+  <div class="scene-container" id="scene">
+   <div class="book-wrapper" id="bookWrapper">
+    <div class="book" id="book"><!-- Spine -->
+     <div class="spine"><span class="spine-title">SẢN PHẨM SÁNG TẠO</span>
+     </div><!-- Back Board -->
+     <div class="back-board"></div><!-- Pages Container -->
+     <div class="pages-container" id="pagesContainer"><!-- TOC Panel -->
+      <div class="toc-panel">
+       <h2 class="toc-title">📖 Mục Lục</h2>
+       <ul class="toc-list" id="tocList">
+        <li class="toc-item" data-page="0"><span class="toc-number">1</span> <span class="toc-text">Video Giới Thiệu</span></li>
+        <li class="toc-item" data-page="1"><span class="toc-number">2</span> <span class="toc-text">Giới Thiệu Dự Án</span></li>
+        <li class="toc-item" data-page="2"><span class="toc-number">3</span> <span class="toc-text">Mục Tiêu &amp; Phạm Vi</span></li>
+        <li class="toc-item" data-page="3"><span class="toc-number">4</span> <span class="toc-text">Phương Pháp Thực Hiện</span></li>
+        <li class="toc-item" data-page="4"><span class="toc-number">5</span> <span class="toc-text">Kết Quả Đạt Được</span></li>
+        <li class="toc-item" data-page="5"><span class="toc-number">6</span> <span class="toc-text">Bài Học Kinh Nghiệm</span></li>
+        <li class="toc-item" data-page="6"><span class="toc-number">7</span> <span class="toc-text">Hướng Phát Triển</span></li>
+        <li class="toc-item" data-page="7"><span class="toc-number">8</span> <span class="toc-text">Tài Liệu Tham Khảo</span></li>
+       </ul>
+      </div><!-- Page 1: Video -->
+      <div class="page" data-index="0">
+       <div class="page-front">
+        <div class="page-header">
+         <h3 class="page-title">🎬 Video Giới Thiệu</h3><span class="page-number">Trang 1</span>
+        </div>
+        <div class="page-content">
+         <p>Video giới thiệu tổng quan về dự án sáng tạo, trình bày ý tưởng và quá trình thực hiện.</p>
+         <div class="video-container">
+          <video id="pageVideo" src="Video/HCM202-TK.mp4" preload="metadata"></video>
+          <div class="video-overlay" id="videoOverlay">
+           <div class="play-button">
+            <svg viewbox="0 0 24 24">
+             <path d="M8 5v14l11-7z" />
+            </svg>
+           </div>
+          </div>
+         </div>
+         <p style="font-size: 12px; color: #888; text-align: center; margin-top: 10px;">Click để xem video toàn màn hình</p>
+        </div>
+       </div>
+       <div class="page-back">
+        <div class="page-header">
+         <h3 class="page-title">📝 Ghi Chú Video</h3><span class="page-number">Trang 1b</span>
+        </div>
+        <div class="page-content">
+         <h4>Nội dung chính trong video:</h4>
+         <ul>
+          <li>Giới thiệu ý tưởng sáng tạo</li>
+          <li>Quá trình nghiên cứu và phát triển</li>
+          <li>Demo sản phẩm hoàn thiện</li>
+          <li>Phản hồi từ người dùng thử nghiệm</li>
+         </ul>
+        </div>
+       </div>
+      </div><!-- Page 2: Introduction -->
+      <div class="page" data-index="1">
+       <div class="page-front">
+        <div class="page-header">
+         <h3 class="page-title">💡 Giới Thiệu Dự Án</h3><span class="page-number">Trang 2</span>
+        </div>
+        <div class="page-content">
+         <p>Dự án "Sản phẩm sáng tạo" được khởi xướng với mục đích mang đến giải pháp đổi mới trong lĩnh vực công nghệ giáo dục.</p>
+         <h4>Bối cảnh ra đời</h4>
+         <p>Trong bối cảnh chuyển đổi số đang diễn ra mạnh mẽ, nhu cầu về các công cụ học tập tương tác và trực quan ngày càng tăng cao. Dự án này đáp ứng nhu cầu đó.</p>
+         <h4>Ý tưởng cốt lõi</h4>
+         <p>Kết hợp công nghệ web hiện đại với thiết kế trải nghiệm người dùng để tạo ra sản phẩm vừa hữu ích vừa thú vị.</p>
+        </div>
+       </div>
+       <div class="page-back">
+        <div class="page-header">
+         <h3 class="page-title">👥 Đội Ngũ Thực Hiện</h3><span class="page-number">Trang 2b</span>
+        </div>
+        <div class="page-content">
+         <h4>Thành viên nhóm</h4>
+         <ul>
+          <li><strong>Trưởng nhóm:</strong> [Tên thành viên]</li>
+          <li><strong>Designer:</strong> [Tên thành viên]</li>
+          <li><strong>Developer:</strong> [Tên thành viên]</li>
+          <li><strong>Content:</strong> [Tên thành viên]</li>
+         </ul>
+         <h4>Giảng viên hướng dẫn</h4>
+         <p>[Tên giảng viên hướng dẫn]</p>
+        </div>
+       </div>
+      </div><!-- Page 3: Goals -->
+      <div class="page" data-index="2">
+       <div class="page-front">
+        <div class="page-header">
+         <h3 class="page-title">🎯 Mục Tiêu &amp; Phạm Vi</h3><span class="page-number">Trang 3</span>
+        </div>
+        <div class="page-content">
+         <h4>Mục tiêu chính</h4>
+         <ul>
+          <li>Phát triển sản phẩm có tính ứng dụng cao</li>
+          <li>Áp dụng kiến thức đã học vào thực tế</li>
+          <li>Tạo trải nghiệm người dùng xuất sắc</li>
+          <li>Đóng góp vào cộng đồng học tập</li>
+         </ul>
+         <h4>Phạm vi dự án</h4>
+         <p>Dự án tập trung vào việc xây dựng một nền tảng tương tác đa phương tiện, phục vụ cho mục đích giáo dục và trình bày thông tin.</p>
+        </div>
+       </div>
+       <div class="page-back">
+        <div class="page-header">
+         <h3 class="page-title">📊 Chỉ Số Thành Công</h3><span class="page-number">Trang 3b</span>
+        </div>
+        <div class="page-content">
+         <h4>KPIs đặt ra</h4>
+         <ul>
+          <li>Hoàn thành 100% tính năng cốt lõi</li>
+          <li>Đạt độ hài lòng 90% từ người dùng</li>
+          <li>Tương thích đa nền tảng</li>
+          <li>Hiệu suất tải trang dưới 3 giây</li>
+         </ul>
+        </div>
+       </div>
+      </div><!-- Page 4: Methods -->
+      <div class="page" data-index="3">
+       <div class="page-front">
+        <div class="page-header">
+         <h3 class="page-title">⚙️ Phương Pháp Thực Hiện</h3><span class="page-number">Trang 4</span>
+        </div>
+        <div class="page-content">
+         <h4>Công nghệ sử dụng</h4>
+         <ul>
+          <li><strong>Frontend:</strong> HTML5, CSS3, JavaScript</li>
+          <li><strong>3D Graphics:</strong> CSS 3D Transforms</li>
+          <li><strong>Animation:</strong> CSS Transitions &amp; Keyframes</li>
+          <li><strong>Design:</strong> Figma, Adobe XD</li>
+         </ul>
+         <h4>Quy trình phát triển</h4>
+         <p>Áp dụng phương pháp Agile với các sprint 2 tuần, đảm bảo sản phẩm được cải tiến liên tục dựa trên phản hồi.</p>
+        </div>
+       </div>
+       <div class="page-back">
+        <div class="page-header">
+         <h3 class="page-title">📅 Timeline Dự Án</h3><span class="page-number">Trang 4b</span>
+        </div>
+        <div class="page-content">
+         <h4>Các giai đoạn</h4>
+         <ul>
+          <li><strong>Tuần 1-2:</strong> Nghiên cứu &amp; Lên ý tưởng</li>
+          <li><strong>Tuần 3-4:</strong> Thiết kế giao diện</li>
+          <li><strong>Tuần 5-8:</strong> Phát triển sản phẩm</li>
+          <li><strong>Tuần 9-10:</strong> Testing &amp; Hoàn thiện</li>
+         </ul>
+        </div>
+       </div>
+      </div><!-- Page 5: Results -->
+      <div class="page" data-index="4">
+       <div class="page-front">
+        <div class="page-header">
+         <h3 class="page-title">🏆 Kết Quả Đạt Được</h3><span class="page-number">Trang 5</span>
+        </div>
+        <div class="page-content">
+         <h4>Thành tựu nổi bật</h4>
+         <ul>
+          <li>Hoàn thành sản phẩm đúng tiến độ</li>
+          <li>Giao diện 3D tương tác mượt mà</li>
+          <li>Tương thích đa trình duyệt</li>
+          <li>Nhận phản hồi tích cực từ người dùng</li>
+         </ul>
+         <h4>Điểm nhấn sáng tạo</h4>
+         <p>Hiệu ứng sách 3D với khả năng lật trang realistic, mang đến trải nghiệm đọc số hóa gần gũi với sách truyền thống.</p>
+        </div>
+       </div>
+       <div class="page-back">
+        <div class="page-header">
+         <h3 class="page-title">📈 Số Liệu Thống Kê</h3><span class="page-number">Trang 5b</span>
+        </div>
+        <div class="page-content">
+         <h4>Performance Metrics</h4>
+         <ul>
+          <li>Thời gian tải: &lt; 2 giây</li>
+          <li>Frame rate: 60 FPS</li>
+          <li>Lighthouse Score: 95+</li>
+          <li>Responsive trên mọi thiết bị</li>
+         </ul>
+        </div>
+       </div>
+      </div><!-- Page 6: Lessons -->
+      <div class="page" data-index="5">
+       <div class="page-front">
+        <div class="page-header">
+         <h3 class="page-title">📚 Bài Học Kinh Nghiệm</h3><span class="page-number">Trang 6</span>
+        </div>
+        <div class="page-content">
+         <h4>Những điều học được</h4>
+         <ul>
+          <li>Tầm quan trọng của việc lập kế hoạch chi tiết</li>
+          <li>Kỹ năng làm việc nhóm hiệu quả</li>
+          <li>Cách xử lý vấn đề kỹ thuật phức tạp</li>
+          <li>Quản lý thời gian trong dự án thực tế</li>
+         </ul>
+         <h4>Thách thức đã vượt qua</h4>
+         <p>Tối ưu hóa hiệu suất 3D trên các thiết bị cấu hình thấp là thách thức lớn nhất, đã được giải quyết bằng các kỹ thuật CSS tiên tiến.</p>
+        </div>
+       </div>
+       <div class="page-back">
+        <div class="page-header">
+         <h3 class="page-title">💭 Suy Ngẫm</h3><span class="page-number">Trang 6b</span>
+        </div>
+        <div class="page-content">
+         <h4>Điều có thể làm tốt hơn</h4>
+         <ul>
+          <li>Thử nghiệm với người dùng sớm hơn</li>
+          <li>Documentation đầy đủ hơn</li>
+          <li>Tích hợp thêm tính năng accessibility</li>
+         </ul>
+        </div>
+       </div>
+      </div><!-- Page 7: Future -->
+      <div class="page" data-index="6">
+       <div class="page-front">
+        <div class="page-header">
+         <h3 class="page-title">🚀 Hướng Phát Triển</h3><span class="page-number">Trang 7</span>
+        </div>
+        <div class="page-content">
+         <h4>Tính năng dự kiến</h4>
+         <ul>
+          <li>Tích hợp âm thanh và nhạc nền</li>
+          <li>Hỗ trợ đa ngôn ngữ</li>
+          <li>Chế độ đọc tối/sáng</li>
+          <li>Export sang PDF</li>
+          <li>Chia sẻ lên mạng xã hội</li>
+         </ul>
+         <h4>Mở rộng ứng dụng</h4>
+         <p>Phát triển thành nền tảng tạo sách 3D online, cho phép người dùng tự tạo và chia sẻ sách của riêng mình.</p>
+        </div>
+       </div>
+       <div class="page-back">
+        <div class="page-header">
+         <h3 class="page-title">🎯 Roadmap 2025</h3><span class="page-number">Trang 7b</span>
+        </div>
+        <div class="page-content">
+         <h4>Kế hoạch phát triển</h4>
+         <ul>
+          <li><strong>Q1:</strong> Ra mắt phiên bản beta</li>
+          <li><strong>Q2:</strong> Thu thập phản hồi &amp; cải tiến</li>
+          <li><strong>Q3:</strong> Tích hợp tính năng mới</li>
+          <li><strong>Q4:</strong> Ra mắt chính thức</li>
+         </ul>
+        </div>
+       </div>
+      </div><!-- Page 8: References -->
+      <div class="page" data-index="7">
+       <div class="page-front">
+        <div class="page-header">
+         <h3 class="page-title">📑 Tài Liệu Tham Khảo</h3><span class="page-number">Trang 8</span>
+        </div>
+        <div class="page-content">
+         <div class="ref-list">
+          <div class="ref-item"><span class="ref-icon">📄</span>
+           <div class="ref-content">
+            <div class="ref-title">
+             CSS 3D Transforms - MDN Web Docs
+            </div>
+            <div class="ref-desc">
+             Tài liệu kỹ thuật về CSS 3D transformations
+            </div><a href="https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_transforms" target="_blank" rel="noopener noreferrer" class="ref-link"> Xem tài liệu 
+             <svg viewbox="0 0 24 24" fill="currentColor">
+              <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7zm-2 16H5V7h7V5H5a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-7h-2v7H7z" />
+             </svg></a>
+           </div>
+          </div>
+          <div class="ref-item"><span class="ref-icon">🌐</span>
+           <div class="ref-content">
+            <div class="ref-title">
+             W3Schools CSS Tutorial
+            </div>
+            <div class="ref-desc">
+             Hướng dẫn CSS từ cơ bản đến nâng cao
+            </div><a href="https://www.w3schools.com/css/" target="_blank" rel="noopener noreferrer" class="ref-link"> Truy cập website 
+             <svg viewbox="0 0 24 24" fill="currentColor">
+              <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7zm-2 16H5V7h7V5H5a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-7h-2v7H7z" />
+             </svg></a>
+           </div>
+          </div>
+          <div class="ref-item"><span class="ref-icon">🎥</span>
+           <div class="ref-content">
+            <div class="ref-title">
+             YouTube: Advanced CSS Animations
+            </div>
+            <div class="ref-desc">
+             Video hướng dẫn tạo animation phức tạp
+            </div><a href="https://www.youtube.com" target="_blank" rel="noopener noreferrer" class="ref-link"> Xem video 
+             <svg viewbox="0 0 24 24" fill="currentColor">
+              <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7zm-2 16H5V7h7V5H5a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-7h-2v7H7z" />
+             </svg></a>
+           </div>
+          </div>
+          <div class="ref-item"><span class="ref-icon">📚</span>
+           <div class="ref-content">
+            <div class="ref-title">
+             Sách: CSS Secrets - Lea Verou
+            </div>
+            <div class="ref-desc">
+             Cuốn sách về các kỹ thuật CSS nâng cao
+            </div><a href="https://www.oreilly.com/library/view/css-secrets/9781449372736/" target="_blank" rel="noopener noreferrer" class="ref-link"> Xem thông tin 
+             <svg viewbox="0 0 24 24" fill="currentColor">
+              <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7zm-2 16H5V7h7V5H5a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-7h-2v7H7z" />
+             </svg></a>
+           </div>
+          </div>
+         </div>
+        </div>
+       </div>
+       <div class="page-back">
+        <div class="page-header">
+         <h3 class="page-title">🔗 Tài Nguyên B��� Sung</h3><span class="page-number">Trang 8b</span>
+        </div>
+        <div class="page-content">
+         <div class="ref-list">
+          <div class="ref-item"><span class="ref-icon">🧑‍💻</span>
+           <div class="ref-content">
+            <div class="ref-title">
+             GitHub Repository
+            </div>
+            <div class="ref-desc">
+             Mã nguồn dự án trên GitHub
+            </div><a href="https://github.com" target="_blank" rel="noopener noreferrer" class="ref-link"> Xem mã nguồn 
+             <svg viewbox="0 0 24 24" fill="currentColor">
+              <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7zm-2 16H5V7h7V5H5a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-7h-2v7H7z" />
+             </svg></a>
+           </div>
+          </div>
+          <div class="ref-item"><span class="ref-icon">🔗</span>
+           <div class="ref-content">
+            <div class="ref-title">
+             CodePen Examples
+            </div>
+            <div class="ref-desc">
+             Các ví dụ tương tác trên CodePen
+            </div><a href="https://codepen.io" target="_blank" rel="noopener noreferrer" class="ref-link"> Xem demo 
+             <svg viewbox="0 0 24 24" fill="currentColor">
+              <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7zm-2 16H5V7h7V5H5a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-7h-2v7H7z" />
+             </svg></a>
+           </div>
+          </div>
+          <div class="ref-item"><span class="ref-icon">📖</span>
+           <div class="ref-content">
+            <div class="ref-title">
+             Smashing Magazine
+            </div>
+            <div class="ref-desc">
+             Bài viết về web design &amp; development
+            </div><a href="https://www.smashingmagazine.com" target="_blank" rel="noopener noreferrer" class="ref-link"> Đọc bài viết 
+             <svg viewbox="0 0 24 24" fill="currentColor">
+              <path d="M14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7zm-2 16H5V7h7V5H5a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-7h-2v7H7z" />
+             </svg></a>
+           </div>
+          </div>
+         </div>
+        </div>
+       </div>
+      </div>
+     </div><!-- Cover Front -->
+     <div class="cover-front" id="coverFront">
+      <div class="cover-content">
+       <div class="cover-ornament">
+        ✦ ❖ ✦
+       </div>
+       <h1 class="cover-title" id="coverTitle">Sản phẩm sáng tạo</h1>
+       <p class="cover-subtitle">Creative Product</p>
+      </div><span class="cover-year">2025</span>
+      <div class="cover-back">
+       <div class="cover-back-content">
+        <h3>Chào mừng!</h3>
+        <p>Cảm ơn bạn đã mở cuốn sách này. Hãy khám phá những trang nội dung bên phải và sử dụng mục lục để điều hướng.</p>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div><!-- Controls -->
+  <div class="controls" id="controls"><button class="ctrl-btn" id="prevBtn" title="Trang trước">
+    <svg viewbox="0 0 24 24">
+     <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+    </svg></button> <span class="page-indicator" id="pageIndicator">Trang 1/8</span> <button class="ctrl-btn" id="nextBtn" title="Trang sau">
+    <svg viewbox="0 0 24 24">
+     <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z" />
+    </svg></button> <button class="close-btn" id="closeBtn">Đóng sách</button>
+  </div><!-- Open Hint -->
+  <div class="open-hint" id="openHint">
+   ✨ Click vào bìa sách để mở ✨
+  </div><!-- Video Modal -->
+  <div class="video-modal" id="videoModal">
+   <div class="modal-content"><button class="modal-close" id="modalClose">×</button>
+    <video id="modalVideo" src="Video/HCM202-TK.mp4" controls></video>
+   </div>
+  </div>
+  <script>
+    // State Machine
+    let isOpen = false;
+    let currentPage = -1; // -1 when closed, 0-7 when open
+    let rotateX = 0;
+    let rotateY = 0;
+    let isDragging = false;
+    let startX, startY;
+
+    // DOM Elements
+    const book = document.getElementById('book');
+    const bookWrapper = document.getElementById('bookWrapper');
+    const coverFront = document.getElementById('coverFront');
+    const pagesContainer = document.getElementById('pagesContainer');
+    const controls = document.getElementById('controls');
+    const openHint = document.getElementById('openHint');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const closeBtn = document.getElementById('closeBtn');
+    const pageIndicator = document.getElementById('pageIndicator');
+    const tocItems = document.querySelectorAll('.toc-item');
+    const pages = document.querySelectorAll('.page');
+    const videoOverlay = document.getElementById('videoOverlay');
+    const videoModal = document.getElementById('videoModal');
+    const modalClose = document.getElementById('modalClose');
+    const pageVideo = document.getElementById('pageVideo');
+    const modalVideo = document.getElementById('modalVideo');
+    const scene = document.getElementById('scene');
+
+    // Generate Stars
+    function generateStars() {
+      const starsContainer = document.getElementById('stars');
+      for (let i = 0; i < 200; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        const size = Math.random() * 3 + 1;
+        star.style.width = size + 'px';
+        star.style.height = size + 'px';
+        star.style.setProperty('--duration', (Math.random() * 3 + 2) + 's');
+        star.style.setProperty('--min-opacity', Math.random() * 0.3 + 0.1);
+        star.style.animationDelay = Math.random() * 5 + 's';
+        starsContainer.appendChild(star);
+      }
+    }
+
+    // Open Book
+    function openBook() {
+      if (isOpen) return;
+      
+      isOpen = true;
+      currentPage = 0;
+      book.classList.add('open');
+      controls.classList.add('visible');
+      openHint.style.display = 'none';
+      
+      updateUI();
+    }
+
+    // Close Book with stagger animation
+    function closeBook() {
+      if (!isOpen) return;
+
+      // First, flip all pages back with stagger
+      const flippedPages = [...pages].filter(p => p.classList.contains('flipped'));
+      const staggerDelay = 100;
+
+      flippedPages.reverse().forEach((page, index) => {
+        setTimeout(() => {
+          page.classList.remove('flipped');
+        }, index * staggerDelay);
+      });
+
+      // After all pages flipped back, close the cover
+      const totalDelay = flippedPages.length * staggerDelay + 400;
+      
+      setTimeout(() => {
+        isOpen = false;
+        currentPage = -1;
+        book.classList.remove('open');
+        controls.classList.remove('visible');
+        openHint.style.display = 'block';
+        updateUI();
+      }, totalDelay);
+    }
+
+    // Flip to Next Page
+    function flipNext() {
+      if (!isOpen) return;
+
+      if (currentPage < 7) {
+        pages[currentPage].classList.add('flipped');
+        currentPage++;
+        updateUI();
+      } else if (currentPage === 7) {
+        closeBook();
+      }
+    }
+
+    // Flip to Previous Page
+    function flipPrev() {
+      if (!isOpen) return;
+
+      if (currentPage > 0) {
+        currentPage--;
+        pages[currentPage].classList.remove('flipped');
+        updateUI();
+      } else if (currentPage === 0) {
+        closeBook();
+      }
+    }
+
+    // Go to specific page
+    function goToPage(pageIndex) {
+      if (!isOpen || pageIndex < 0 || pageIndex > 7) return;
+
+      if (pageIndex > currentPage) {
+        // Flip forward
+        for (let i = currentPage; i < pageIndex; i++) {
+          setTimeout(() => {
+            pages[i].classList.add('flipped');
+          }, (i - currentPage) * 150);
+        }
+      } else if (pageIndex < currentPage) {
+        // Flip backward
+        for (let i = currentPage - 1; i >= pageIndex; i--) {
+          setTimeout(() => {
+            pages[i].classList.remove('flipped');
+          }, (currentPage - 1 - i) * 150);
+        }
+      }
+
+      setTimeout(() => {
+        currentPage = pageIndex;
+        updateUI();
+      }, Math.abs(pageIndex - currentPage) * 150 + 100);
+    }
+
+    // Update UI
+    function updateUI() {
+      // Update page indicator
+      if (isOpen) {
+        pageIndicator.textContent = `Trang ${currentPage + 1}/8`;
+      }
+
+      // Update TOC active state
+      tocItems.forEach((item, index) => {
+        item.classList.toggle('active', index === currentPage);
+      });
+
+      // Update button states
+      prevBtn.disabled = false;
+      nextBtn.disabled = false;
+    }
+
+    // Video Modal Functions
+    function openVideoModal() {
+      // First rotate the book
+      bookWrapper.classList.add('rotated');
+      
+      // Then show modal after rotation
+      setTimeout(() => {
+        videoModal.classList.add('active');
+        modalVideo.currentTime = 0;
+        modalVideo.play();
+      }, 800);
+    }
+
+    function closeVideoModal() {
+      modalVideo.pause();
+      videoModal.classList.remove('active');
+      
+      // Rotate book back
+      setTimeout(() => {
+        bookWrapper.classList.remove('rotated');
+      }, 100);
+    }
+
+    // Mouse/Touch drag for book rotation
+    function handleDragStart(e) {
+      if (isOpen) return;
+      isDragging = true;
+      startX = e.clientX || e.touches[0].clientX;
+      startY = e.clientY || e.touches[0].clientY;
+    }
+
+    function handleDragMove(e) {
+      if (!isDragging || isOpen) return;
+      
+      const x = e.clientX || e.touches[0].clientX;
+      const y = e.clientY || e.touches[0].clientY;
+      
+      const deltaX = (x - startX) * 0.3;
+      const deltaY = (y - startY) * 0.3;
+      
+      rotateY = Math.max(-30, Math.min(30, deltaX));
+      rotateX = Math.max(-15, Math.min(15, -deltaY));
+      
+      book.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    }
+
+    function handleDragEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      
+      // Smooth return to center
+      book.style.transition = 'transform 0.5s ease';
+      book.style.transform = 'rotateX(0deg) rotateY(0deg)';
+      rotateX = 0;
+      rotateY = 0;
+      
+      setTimeout(() => {
+        book.style.transition = '';
+      }, 500);
+    }
+
+    // Hover effect for slight rotation
+    function handleHover(e) {
+      if (isOpen || isDragging) return;
+      
+      const rect = scene.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      
+      const x = (e.clientX - centerX) / (rect.width / 2);
+      const y = (e.clientY - centerY) / (rect.height / 2);
+      
+      rotateY = x * 10;
+      rotateX = -y * 5;
+      
+      book.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    }
+
+    function resetHover() {
+      if (isOpen || isDragging) return;
+      
+      book.style.transition = 'transform 0.5s ease';
+      book.style.transform = 'rotateX(0deg) rotateY(0deg)';
+      
+      setTimeout(() => {
+        book.style.transition = '';
+      }, 500);
+    }
+
+    // Event Listeners
+    coverFront.addEventListener('click', (e) => {
+      if (!isOpen) {
+        openBook();
+        e.stopPropagation();
+      }
+    });
+
+    prevBtn.addEventListener('click', flipPrev);
+    nextBtn.addEventListener('click', flipNext);
+    closeBtn.addEventListener('click', closeBook);
+
+    tocItems.forEach((item) => {
+      item.addEventListener('click', () => {
+        const pageIndex = parseInt(item.dataset.page);
+        goToPage(pageIndex);
+      });
+    });
+
+    videoOverlay.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openVideoModal();
+    });
+
+    modalClose.addEventListener('click', closeVideoModal);
+    videoModal.addEventListener('click', (e) => {
+      if (e.target === videoModal) {
+        closeVideoModal();
+      }
+    });
+
+    // Drag events
+    scene.addEventListener('mousedown', handleDragStart);
+    scene.addEventListener('mousemove', handleDragMove);
+    scene.addEventListener('mouseup', handleDragEnd);
+    scene.addEventListener('mouseleave', handleDragEnd);
+
+    scene.addEventListener('touchstart', handleDragStart);
+    scene.addEventListener('touchmove', handleDragMove);
+    scene.addEventListener('touchend', handleDragEnd);
+
+    // Hover events
+    scene.addEventListener('mousemove', handleHover);
+    scene.addEventListener('mouseleave', resetHover);
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (!isOpen) return;
+      
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        flipNext();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        flipPrev();
+      } else if (e.key === 'Escape') {
+        if (videoModal.classList.contains('active')) {
+          closeVideoModal();
+        } else {
+          closeBook();
+        }
+      }
+    });
+
+    // Initialize
+    generateStars();
+
+    // Element SDK initialization
+    const defaultConfig = {
+      book_title: 'Sản phẩm sáng tạo'
+    };
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: async (config) => {
+          const title = config.book_title || defaultConfig.book_title;
+          document.getElementById('coverTitle').textContent = title;
+          document.querySelector('.spine-title').textContent = title.toUpperCase();
+        },
+        mapToCapabilities: (config) => ({
+          recolorables: [],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ['book_title', config.book_title || defaultConfig.book_title]
+        ])
+      });
+    }
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bca9a60815c3d96',t:'MTc2ODE5OTQwNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

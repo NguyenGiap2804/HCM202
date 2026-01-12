@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="vi" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sách 3D Tương Tác</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&amp;family=Lato:wght@400;700&amp;display=swap" rel="stylesheet">
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    * {
+      box-sizing: border-box;
+    }
+    
+    .title-font {
+      font-family: 'Playfair Display', serif;
+    }
+    
+    .body-font {
+      font-family: 'Lato', sans-serif;
+    }
+    
+    .book-scene {
+      perspective: 2500px;
+    }
+    
+    .book-3d {
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 1s ease;
+    }
+    
+    .book-3d.opened {
+      transform: translateX(45%);
+    }
+    
+    .book-3d.video-mode {
+      transform: translateX(45%) rotateY(-90deg);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    
+    /* Bìa */
+    .cover {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transform-origin: left;
+      transition: transform 1.2s ease;
+      cursor: pointer;
+      z-index: 100;
+    }
+    
+    .cover.opened {
+      transform: rotateY(-160deg);
+    }
+    
+    .cover-front {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(145deg, #7c3aed 0%, #5b21b6 50%, #4c1d95 100%);
+      border-radius: 0 12px 12px 0;
+      backface-visibility: hidden;
+      box-shadow: 5px 5px 25px rgba(0,0,0,0.4);
+    }
+    
+    .cover-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border-radius: 0 12px 12px 0;
+      transform: rotateY(180deg);
+      backface-visibility: hidden;
+    }
+    
+    /* Gáy sách */
+    .spine {
+      position: absolute;
+      left: -35px;
+      width: 35px;
+      height: 100%;
+      background: linear-gradient(90deg, #4c1d95 0%, #6d28d9 50%, #4c1d95 100%);
+      transform: rotateY(-90deg);
+      transform-origin: right;
+      border-radius: 6px 0 0 6px;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .spine-text {
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      writing-mode: vertical-rl;
+      letter-spacing: 1px;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    }
+    
+    /* Trang */
+    .page {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transform-origin: left;
+      transition: transform 0.9s ease;
+    }
+    
+    .page.flipped {
+      transform: rotateY(-160deg);
+    }
+    
+    .page-front, .page-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: white;
+      backface-visibility: hidden;
+      border-radius: 0 8px 8px 0;
+      padding: 2rem;
+      overflow-y: auto;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+    
+    .page-back {
+      transform: rotateY(180deg);
+    }
+    
+    .content-box {
+      min-height: 150px;
+      background: #f9fafb;
+      border: 2px dashed #d1d5db;
+      border-radius: 8px;
+      padding: 1rem;
+      transition: all 0.3s;
+    }
+    
+    .content-box:focus {
+      outline: none;
+      border-color: #8b5cf6;
+      background: white;
+    }
+    
+    .chapter-title {
+      color: #6d28d9;
+      border-bottom: 3px solid #a78bfa;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    
+    .btn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #7c3aed, #6d28d9);
+      transform: translateY(-2px);
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .ref-item {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 0.75rem;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .ref-item:hover {
+      border-color: #8b5cf6;
+      transform: translateX(4px);
+    }
+    
+    .ref-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    
+    /* Video fullscreen */
+    .video-fullscreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      animation: fadeIn 0.5s ease;
+    }
+    
+    .video-fullscreen.active {
+      display: flex;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .video-container {
+      position: relative;
+      width: 90%;
+      height: 90%;
+      max-width: 1400px;
+      max-height: 800px;
+      background: black;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+      animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    @keyframes scaleIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    
+    .close-video {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 40px;
+      height: 40px;
+      background: rgba(255,255,255,0.2);
+      border: 2px solid white;
+      border-radius: 50%;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s;
+      z-index: 10;
+    }
+    
+    .close-video:hover {
+      background: rgba(255,255,255,0.3);
+      transform: rotate(90deg);
+    }
+    
+    .video-thumbnail {
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .video-thumbnail:hover {
+      transform: scale(1.02);
+      box-shadow: 0 8px 24px rgba(139, 92, 246, 0.3);
+    }
+    
+    .play-icon {
+      width: 80px;
+      height: 80px;
+      background: rgba(139, 92, 246, 0.9);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      transition: all 0.3s;
+    }
+    
+    .video-thumbnail:hover .play-icon {
+      background: rgba(139, 92, 246, 1);
+      transform: scale(1.1);
+    }
+    
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 3px;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full m-0 overflow-auto body-font" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%);"><!-- Video Fullscreen -->
+  <div id="videoFullscreen" class="video-fullscreen">
+   <div class="video-container"><button class="close-video" onclick="closeVideo()">×</button>
+    <video id="mainVideo" class="w-full h-full" controls><source id="videoSource" src="Video/HCM202-TK.mp4" type="video/mp4"> Video không được hỗ trợ
+    </video>
+   </div>
+  </div>
+  <main class="w-full h-full flex items-center justify-center p-8">
+   <div class="book-scene">
+    <div id="book3d" class="book-3d" style="width: 400px; height: 550px; transform-style: preserve-3d;"><!-- Gáy -->
+     <div class="spine">
+      <div id="spineText" class="spine-text">
+       SẢN PHẨM SÁNG TẠO
+      </div>
+     </div><!-- Pages -->
+     <div style="position: absolute; width: 100%; height: 100%; transform-style: preserve-3d;"><!-- Page 0 - Title (z-index cao nhất để hiện đầu tiên) -->
+      <div class="page" style="z-index: 5;">
+       <div class="page-front flex flex-col items-center justify-center text-center">
+        <svg class="w-12 h-12 text-purple-600 mb-6" fill="currentColor" viewbox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+        </svg>
+        <h1 id="innerTitle" class="title-font text-3xl font-black text-gray-900 mb-4">Sản phẩm<br>
+         sáng tạo</h1>
+        <div class="w-20 h-1 bg-purple-600 mb-6"></div>
+        <div class="mt-6">
+         <p class="text-xs text-gray-500 uppercase mb-2">Tác giả</p>
+         <p id="authorDisplay" class="title-font text-lg text-gray-700 font-bold" contenteditable="true">Nhập tên</p>
+        </div>
+        <p class="body-font text-gray-500 text-sm mt-6">2024</p>
+       </div>
+       <div class="page-back">
+        <h2 class="title-font text-lg font-bold text-center chapter-title mb-4">📖 Mục lục</h2>
+        <div class="body-font text-sm space-y-2">
+         <div class="flex justify-between p-2 bg-purple-50 rounded"><span>📝 Giới thiệu</span><span class="text-purple-600 font-bold">1</span>
+         </div>
+         <div class="flex justify-between p-2 hover:bg-purple-50 rounded"><span>🔬 Phương pháp</span><span class="text-purple-600 font-bold">2</span>
+         </div>
+         <div class="flex justify-between p-2 hover:bg-purple-50 rounded"><span>📊 Kết quả</span><span class="text-purple-600 font-bold">3</span>
+         </div>
+         <div class="flex justify-between p-2 hover:bg-purple-50 rounded"><span>✅ Kết luận</span><span class="text-purple-600 font-bold">4</span>
+         </div>
+         <div class="flex justify-between p-2 hover:bg-purple-50 rounded"><span>📚 Tài liệu</span><span class="text-purple-600 font-bold">5</span>
+         </div>
+         <div class="flex justify-between p-2 hover:bg-purple-50 rounded"><span>🎬 Video</span><span class="text-purple-600 font-bold">6</span>
+         </div>
+        </div>
+       </div>
+      </div><!-- Page 1 -->
+      <div class="page" style="z-index: 4;">
+       <div class="page-front">
+        <h2 id="page1Title" class="title-font text-xl font-bold chapter-title">Giới thiệu</h2>
+        <div class="content-box body-font text-gray-700" contenteditable="true">
+         Phần mở đầu của sản phẩm.
+        </div>
+       </div>
+       <div class="page-back">
+        <h2 id="page2Title" class="title-font text-xl font-bold chapter-title">Phương pháp</h2>
+        <div class="content-box body-font text-gray-700" contenteditable="true">
+         Mô tả phương pháp nghiên cứu.
+        </div>
+       </div>
+      </div><!-- Page 2 -->
+      <div class="page" style="z-index: 3;">
+       <div class="page-front">
+        <h2 id="page3Title" class="title-font text-xl font-bold chapter-title">Kết quả</h2>
+        <div class="content-box body-font text-gray-700" contenteditable="true">
+         Trình bày kết quả nghiên cứu.
+        </div>
+       </div>
+       <div class="page-back">
+        <h2 class="title-font text-xl font-bold chapter-title">Kết luận</h2>
+        <div class="content-box body-font text-gray-700" contenteditable="true">
+         Tổng kết và đề xuất.
+        </div>
+       </div>
+      </div><!-- Page 3 - References -->
+      <div class="page" style="z-index: 2;">
+       <div class="page-front">
+        <h2 class="title-font text-xl font-bold chapter-title">📚 Tài liệu tham khảo</h2>
+        <div class="ref-item">
+         <div class="ref-icon" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+          📖
+         </div>
+         <div class="flex-1">
+          <div class="font-semibold text-gray-800 text-sm" contenteditable="true">
+           Nguyen, V.A. (2024)
+          </div><input type="text" class="w-full text-xs text-gray-600 border-none bg-transparent" value="https://scholar.google.com/">
+         </div>
+        </div>
+        <div class="ref-item">
+         <div class="ref-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
+          🔬
+         </div>
+         <div class="flex-1">
+          <div class="font-semibold text-gray-800 text-sm" contenteditable="true">
+           Tran, T.B. (2023)
+          </div><input type="text" class="w-full text-xs text-gray-600 border-none bg-transparent" value="https://researchgate.net/">
+         </div>
+        </div>
+        <div class="ref-item">
+         <div class="ref-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+          📄
+         </div>
+         <div class="flex-1">
+          <div class="font-semibold text-gray-800 text-sm" contenteditable="true">
+           Le, M.C. (2024)
+          </div><input type="text" class="w-full text-xs text-gray-600 border-none bg-transparent" value="https://academia.edu/">
+         </div>
+        </div>
+        <div class="ref-item">
+         <div class="ref-icon" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+          📰
+         </div>
+         <div class="flex-1">
+          <div class="font-semibold text-gray-800 text-sm" contenteditable="true">
+           Pham, D.E. (2023)
+          </div><input type="text" class="w-full text-xs text-gray-600 border-none bg-transparent" value="https://journals.edu/">
+         </div>
+        </div>
+        <div class="ref-item">
+         <div class="ref-icon" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+          📚
+         </div>
+         <div class="flex-1">
+          <div class="font-semibold text-gray-800 text-sm" contenteditable="true">
+           Hoang, F.G. (2024)
+          </div><input type="text" class="w-full text-xs text-gray-600 border-none bg-transparent" value="https://books.google.com/">
+         </div>
+        </div>
+       </div>
+       <div class="page-back">
+        <div class="flex items-center justify-center h-full">
+         <p class="text-gray-400">~ Hết ~</p>
+        </div>
+       </div>
+      </div><!-- Page Video -->
+      <div class="page" style="z-index: 1;">
+       <div class="page-front">
+        <h2 class="title-font text-lg font-bold text-center chapter-title mb-4">🎬 Video giới thiệu</h2>
+        <div class="video-thumbnail" onclick="playVideo()">
+         <div class="play-icon">
+          <svg class="w-10 h-10 text-white ml-1" fill="currentColor" viewbox="0 0 24 24"><path d="M8 5v14l11-7z" />
+          </svg>
+         </div>
+         <p class="text-white text-sm font-semibold">Nhấn để phát video</p>
+         <p class="text-gray-400 text-xs mt-2">Video sẽ phóng to toàn màn hình</p>
+        </div>
+        <div class="mt-4 p-3 bg-purple-50 rounded-lg">
+         <p class="text-xs text-gray-600 mb-2"></p>
+        </div>
+       </div>
+       <div class="page-back">
+        <p class="text-gray-300 text-center mt-20">Trang trống</p>
+       </div>
+      </div>
+     </div><!-- Cover -->
+     <div id="cover" class="cover">
+      <div class="cover-front flex flex-col items-center justify-center p-8">
+       <svg class="w-16 h-16 text-white mb-6" fill="currentColor" viewbox="0 0 24 24"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+       </svg>
+       <h1 id="coverTitle" class="title-font text-3xl font-black text-white text-center leading-tight mb-4">Sản phẩm<br>
+        Sáng tạo</h1>
+       <div class="w-24 h-0.5 bg-white/50 mb-4"></div>
+       <p class="text-purple-100 text-center text-sm">Hành trình tri thức</p>
+       <p class="text-white/60 text-xs mt-8 animate-pulse">✨ Nhấp để mở ✨</p>
+      </div>
+      <div class="cover-back"></div>
+     </div>
+    </div>
+   </div><!-- Controls -->
+   <div id="controls" class="fixed bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4 opacity-0 transition-opacity" style="pointer-events: none;"><button id="prevBtn" class="btn" disabled>◀ Trước</button> <span id="pageNum" class="text-white font-bold px-4 flex items-center">Trang 0 / 5</span> <button id="nextBtn" class="btn">Sau ��</button>
+   </div>
+  </main>
+  <script>
+    const defaultConfig = {
+      book_title: 'Sản phẩm sáng tạo',
+      author_name: 'HCM202 Team 3',
+      video_path: 'Video/HCM202-TK.mp4',
+      page1_title: 'Giới thiệu',
+      page2_title: 'Phương pháp',
+      page3_title: 'Kết quả'
+    };
+
+    let currentPage = -1; // -1 = đóng sách, 0 = bìa mở, 1-5 = các trang
+    let isOpen = false;
+
+    async function onConfigChange(config) {
+      const title = config.book_title || defaultConfig.book_title;
+      const author = config.author_name || defaultConfig.author_name;
+      const videoPath = config.video_path || defaultConfig.video_path;
+      
+      document.getElementById('coverTitle').innerHTML = title.replace(/\s+/g, '<br/>');
+      document.getElementById('innerTitle').innerHTML = title.replace(/\s+/g, '<br/>');
+      document.getElementById('spineText').textContent = title.toUpperCase();
+      document.getElementById('authorDisplay').textContent = author;
+      document.getElementById('videoPathInput').value = videoPath;
+      document.getElementById('videoSource').src = videoPath;
+      
+      document.getElementById('page1Title').textContent = config.page1_title || defaultConfig.page1_title;
+      document.getElementById('page2Title').textContent = config.page2_title || defaultConfig.page2_title;
+      document.getElementById('page3Title').textContent = config.page3_title || defaultConfig.page3_title;
+    }
+
+    function openBook() {
+      if (isOpen) return;
+      isOpen = true;
+      
+      document.getElementById('book3d').classList.add('opened');
+      document.getElementById('cover').classList.add('opened');
+      
+      setTimeout(() => {
+        const controls = document.getElementById('controls');
+        controls.style.opacity = '1';
+        controls.style.pointerEvents = 'auto';
+        currentPage = 0;
+        updateNav();
+      }, 1200);
+    }
+
+    function closeBook() {
+      isOpen = false;
+      currentPage = -1;
+      
+      // Đóng tất cả trang
+      document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('flipped');
+      });
+      
+      // Đóng bìa
+      document.getElementById('cover').classList.remove('opened');
+      document.getElementById('book3d').classList.remove('opened');
+      
+      // Ẩn controls
+      const controls = document.getElementById('controls');
+      controls.style.opacity = '0';
+      controls.style.pointerEvents = 'none';
+      
+      updateNav();
+    }
+
+    function flipPage(dir) {
+      const cover = document.getElementById('cover');
+      const pages = Array.from(document.querySelectorAll('.page'));
+      
+      if (dir === 'next') {
+        if (currentPage === -1) {
+          // Mở bìa
+          openBook();
+        } else if (currentPage >= 0 && currentPage < 5) {
+          // Lật trang
+          const pageToFlip = pages.find(p => p.style.zIndex == (5 - currentPage));
+          if (pageToFlip) {
+            pageToFlip.classList.add('flipped');
+          }
+          currentPage++;
+        } else if (currentPage === 5) {
+          // Đã đến trang cuối, đóng sách
+          closeBook();
+        }
+      } else if (dir === 'prev') {
+        if (currentPage > 0) {
+          currentPage--;
+          // Mở lại trang vừa lật
+          const pageToUnflip = pages.find(p => p.style.zIndex == (5 - currentPage));
+          if (pageToUnflip) {
+            pageToUnflip.classList.remove('flipped');
+          }
+        } else if (currentPage === 0) {
+          // Đóng bìa, về trạng thái đóng sách
+          closeBook();
+        }
+      }
+      
+      updateNav();
+    }
+
+    function updateNav() {
+      const pageNumEl = document.getElementById('pageNum');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      
+      if (currentPage === -1) {
+        pageNumEl.textContent = 'Sách đóng';
+        prevBtn.disabled = true;
+        nextBtn.disabled = false;
+        nextBtn.textContent = 'Mở sách';
+      } else if (currentPage === 0) {
+        pageNumEl.textContent = 'Bìa';
+        prevBtn.disabled = false;
+        prevBtn.textContent = '◀ Đóng';
+        nextBtn.disabled = false;
+        nextBtn.textContent = 'Sau ▶';
+      } else if (currentPage === 5) {
+        pageNumEl.textContent = 'Trang cuối';
+        prevBtn.disabled = false;
+        prevBtn.textContent = '◀ Trước';
+        nextBtn.disabled = false;
+        nextBtn.textContent = 'Đóng sách';
+      } else {
+        pageNumEl.textContent = `Trang ${currentPage} / 5`;
+        prevBtn.disabled = false;
+        prevBtn.textContent = '◀ Trước';
+        nextBtn.disabled = false;
+        nextBtn.textContent = 'Sau ▶';
+      }
+    }
+
+    function playVideo() {
+      const book = document.getElementById('book3d');
+      const fullscreen = document.getElementById('videoFullscreen');
+      const video = document.getElementById('mainVideo');
+      
+      book.classList.add('video-mode');
+      fullscreen.classList.add('active');
+      
+      video.load();
+      video.play().catch(err => {
+        console.error('Không thể phát video:', err);
+      });
+    }
+
+    function closeVideo() {
+      const book = document.getElementById('book3d');
+      const fullscreen = document.getElementById('videoFullscreen');
+      const video = document.getElementById('mainVideo');
+      
+      video.pause();
+      fullscreen.classList.remove('active');
+      book.classList.remove('video-mode');
+    }
+
+    function updateVideoPath() {
+      const newPath = document.getElementById('videoPathInput').value;
+      document.getElementById('videoSource').src = newPath;
+      if (window.elementSdk && window.elementSdk.config) {
+        window.elementSdk.setConfig({ video_path: newPath });
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('cover').addEventListener('click', openBook);
+      document.getElementById('prevBtn').addEventListener('click', () => flipPage('prev'));
+      document.getElementById('nextBtn').addEventListener('click', () => flipPage('next'));
+      
+      document.querySelectorAll('.ref-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          if (e.target.tagName !== 'INPUT' && e.target.contentEditable !== 'true') {
+            const url = item.querySelector('input').value;
+            if (url && url.startsWith('http')) {
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }
+          }
+        });
+      });
+      
+      document.getElementById('videoFullscreen').addEventListener('click', (e) => {
+        if (e.target.id === 'videoFullscreen') {
+          closeVideo();
+        }
+      });
+    });
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities: () => ({
+          recolorables: [],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ['book_title', config.book_title || defaultConfig.book_title],
+          ['author_name', config.author_name || defaultConfig.author_name],
+          ['video_path', config.video_path || defaultConfig.video_path],
+          ['page1_title', config.page1_title || defaultConfig.page1_title],
+          ['page2_title', config.page2_title || defaultConfig.page2_title],
+          ['page3_title', config.page3_title || defaultConfig.page3_title]
+        ])
+      });
+    }
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bca51fa96a45097',t:'MTc2ODE5NjQzOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
